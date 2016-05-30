@@ -11,6 +11,7 @@ from skimage import measure
 from skimage.draw import polygon
 from skimage import transform
 import cv2
+import glob
 script_path = os.path.dirname(os.path.realpath(__file__))
 work_dir = os.path.curdir
 
@@ -20,7 +21,37 @@ work_dir = os.path.curdir
 app = QtGui.QApplication([])
 win = QtGui.QWidget()
 
+class MainWindow(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
 
+
+class Image:
+    def __init__(self, fileName):
+        self.regions = []
+        self.fileName = fileName
+
+    def loadData(self):
+        self.rawData = io.imread(self.fileName)
+        self.cData = self.rawData.copy()
+        self.rawData = color.rgb2gray(self.rawData)
+        self.rawData = transform.rotate(rawData, angle=90,
+                                        clip=False, resize=True)
+        self.cData = transform.rotate(cData, angle=90,
+                                      clip=False, resize=True)
+
+    def addRegion(self, region):
+        self.regions.append(region)
+
+
+class Region:
+    def __init__(self):
+        self.center = {'x': 0, 'y': 0}
+        self.type = None
+        self.array = None
+
+    def saveRegion(self):
+        pass
 
 
 def loadData(fName):
@@ -138,15 +169,16 @@ def saveContour(x_roi, y_roi):
             out_r[mask == 1] = roi_r[mask == 1]
             out[mask == 1] = roi_copy[mask == 1]
             np.savetxt('t.txt', c)
-            io.imsave('b.tif', out_b)
-            io.imsave('g.tif', out_g)
-            io.imsave('r.tif', out_r)
+            io.imsave('b.bmp', out_b)
+            io.imsave('g.bmp', out_g)
+            io.imsave('r.bmp', out_r)
             out_rgb = cv2.merge((out_b, out_g, out_r))
-            io.imsave('out_rgb.tif', out_rgb)
-            io.imsave('out_grey.tif', out)
+            io.imsave('out_rgb.bmp', out_rgb)
+            io.imsave('out_grey.bmp', out)
 
 
 if __name__ == '__main__':
+    images = sorted(glob.glob("*.tif"))
     fData, cData = loadData("1.tif")
     # b, g, r = cv2.split(cData)
     b = cData[:, :, 0]
@@ -180,15 +212,22 @@ if __name__ == '__main__':
     contourPlot.setMouseEnabled(x=False, y=False)
 
     rcheck = QtGui.QCheckBox('Plot contour')
+
+    # List widget
+    listWidget = QtGui.QListWidget()
+    for im in images:
+        item = QtGui.QListWidgetItem("Image: %s" % im)
+        listWidget.addItem(item)
     # crosshair
     vline = pg.InfiniteLine(angle=90, movable=False)
     hline = pg.InfiniteLine(angle=0, movable=False)
 
-    w1.addWidget(mainPlot, 0, 0, 1, 3)
+    w1.addWidget(mainPlot, 0, 0, 1, 2)
     w1.addWidget(histogram, 1, 0)
     w1.addWidget(roiPlot, 1, 1)
     w1.addWidget(contourPlot, 1, 2)
     w1.addWidget(rcheck, 2, 1)
+    w1.addWidget(listWidget, 0, 2)
     # win.addLayout(rcheck)
 
     mainPlot.addItem(imgc)
