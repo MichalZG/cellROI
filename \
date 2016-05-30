@@ -83,7 +83,7 @@ class MainWindow(QtGui.QWidget):
 
     def addItemsToList(self, images):
         for im in images:
-            item = QtGui.QListWidgetItem("%s" % im)
+            item = QtGui.QListWidgetItem("Image: %s" % im)
             self.listWidget.addItem(item)
 
     def setMainPlot(self, imgc):
@@ -218,13 +218,9 @@ def mouseClicked(evt):
 
 def onItemChanged(curr, prev):
     global Im
-    global img, imgc
-    print type(curr.text())
-    Im = Image(str(curr.text()))
+    Im = Image(curr)
     Im.loadData()
-    img.setImage(Im.rawData)
-    imgc.setImage(Im.cData)
-    win.setMainPlot(imgc)
+    win.setMainPlot(Im)
 
 
 def saveContour(x_roi, y_roi):
