@@ -47,16 +47,31 @@ class MainWindow(QtGui.QWidget):
 
         # List widget
         self.listWidget = QtGui.QListWidget()
+        # Table widget
+        self.tableWidget = QtGui.QTableWidget()
+        self.tableWidget.setColumnCount(3)
+        # comboBox widget
+        self.comboWidget = QtGui.QComboBox()
+        self.comboWidget.addItem("ss")
+        self.comboWidget.addItem("ww")
+        # self.tableWidget.setMaximumSize(128, 128)
+        # self.tableWidget.setMaximumWidth(self.tableWidget.sizeHintForColumn(0))
         # crosshair
         self.vline = pg.InfiniteLine(angle=90, movable=False)
         self.hline = pg.InfiniteLine(angle=0, movable=False)
 
-        self.w1.addWidget(self.mainPlot, 0, 0, 1, 2)
+        self.vBox = QtGui.QGridLayout()
+        self.vBox.addWidget(self.listWidget)
+        self.vBox.addWidget(self.tableWidget)
+        self.w1.addWidget(self.mainPlot, 0, 0, 1, 1)
         self.w1.addWidget(self.histogram, 1, 0)
         self.w1.addWidget(self.roiPlot, 1, 1)
         self.w1.addWidget(self.contourPlot, 1, 2)
         self.w1.addWidget(self.rcheck, 2, 1)
-        self.w1.addWidget(self.listWidget, 0, 2)
+        self.w1.addLayout(self.vBox, 0, 1)
+        # self.w1.addWidget(self.listWidget, 0, 1)
+        # self.w1.addWidget(self.tableWidget, 0, 2)
+        # self.w1.addWidget(self.comboWidget, 0, 3)
         # win.addLayout(rcheck)
 
         # self.mainPlot.addItem(imgc)
@@ -83,11 +98,21 @@ class MainWindow(QtGui.QWidget):
 
     def addItemsToList(self, images):
         for im in images:
-            item = QtGui.QListWidgetItem("Image: %s" % im)
+            item = QtGui.QListWidgetItem("%s" % im)
             self.listWidget.addItem(item)
 
     def setMainPlot(self, imgc):
         self.mainPlot.addItem(imgc)
+
+    def addToTable(self, item):
+        rowPosition = self.tableWidget.rowCount()
+        self.tableWidget.insertRow(rowPosition)
+        self.tableWidget.setItem(rowPosition, 0, QtGui.QTableWidgetItem(
+            str(rowPosition)))
+        self.tableWidget.setItem(rowPosition, 1, QtGui.QTableWidgetItem(
+            '%.1f' % float(item[0])))
+        self.tableWidget.setItem(rowPosition, 2, QtGui.QTableWidgetItem(
+            '%.1f' % float(item[1])))
 
 
 class Image:
@@ -201,7 +226,8 @@ def mouseMoved(evt):
     pos = evt[0]
     if win.contourPlot.sceneBoundingRect().contains(pos):
         mousePoint = win.vb.mapSceneToView(pos)
-        index = int(mousePoint.x())
+        # index = int(mousePoint.x())
+        index = 50  # FIXME
         if index > 0 and index < 100:
             win.vline.setPos(mousePoint.x())
             win.hline.setPos(mousePoint.y())
@@ -212,15 +238,21 @@ def mouseClicked(evt):
     x_roi = items[1].x()
     y_roi = items[0].y()
     print x_roi, y_roi
-    print roi_coords[0][x_roi][y_roi], roi_coords[1][x_roi][y_roi]
+    x_global = roi_coords[0][x_roi][y_roi]
+    y_global = roi_coords[1][x_roi][y_roi]
     saveContour(x_roi, y_roi)
+    win.addToTable([x_global, y_global])
 
 
 def onItemChanged(curr, prev):
     global Im
-    Im = Image(curr)
+    global img, imgc
+    print type(curr.text())
+    Im = Image(str(curr.text()))
     Im.loadData()
-    win.setMainPlot(Im)
+    img.setImage(Im.rawData)
+    imgc.setImage(Im.cData)
+    win.setMainPlot(imgc)
 
 
 def saveContour(x_roi, y_roi):
