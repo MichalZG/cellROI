@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys
 from PyQt4 import QtCore, QtGui
-import func
 import pyqtgraph as pg
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -18,15 +16,6 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
-
-
-class Main(QtGui.QMainWindow):
-    def __init__(self):
-        super(Main, self).__init__()
-
-        # build ui
-        self.ui = MainWindow()
-        self.ui.setupUi(self)
 
 
 class MainWindow(object):
@@ -105,17 +94,56 @@ class MainWindow(object):
         self.menubar.addAction(self.menuMenu.menuAction())
         self.menubar.addAction(self.menuAbout.menuAction())
 
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-        a, c = func.loadData('1.tif')
         self.mainPlot = pg.PlotWidget()
         self.mainPlot.setAspectLocked()
         self.mainPlot.setMouseEnabled(x=False, y=False)
+        self.histogram = pg.HistogramLUTWidget()
+        self.roiPlot = pg.PlotWidget()
+        self.roiPlot.setAspectLocked()
+        self.roiPlot.setMouseEnabled(x=False, y=False)
+        self.contourPlot = pg.PlotWidget()
+        self.contourPlot.setAspectLocked()
+        self.contourPlot.setMouseEnabled(x=False, y=False)
+        self.vline = pg.InfiniteLine(angle=90, movable=False)
+        self.hline = pg.InfiniteLine(angle=0, movable=False)
+        self.roiImage = pg.ImageItem()
+        self.roiPlot.addItem(self.roiImage)
+        self.contourImage = pg.ImageItem()
+        self.contourPlot.addItem(self.contourImage)
+        self.contourPlot.addItem(self.vline, ignoreBounds=True)
+        self.contourPlot.addItem(self.hline, ignoreBounds=True)
+
+        self.roi = pg.RectROI([100, 100], [100, 100], pen=(0, 9))
+        # self.roi.sigRegionChanged.connect(update)
+
+        self.mainPlot.addItem(self.roi)
+
         self.topLay.addWidget(self.mainPlot)
-        self.img = pg.ImageItem()
-        self.img.setImage(c)
-        self.mainPlot.addItem(self.img)
+        self.botLay.addWidget(self.histogram, 0, 0)
+        self.botLay.addWidget(self.roiPlot, 0, 1, 1, 2)
+        self.botLay.addWidget(self.contourPlot, 0, 3, 1, 2)
+
+        self.timer = QtCore.QTimer()
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def addItemsToList(self, images):
+        for im in images:
+            item = QtGui.QListWidgetItem("%s" % im)
+            self.imagesList.addItem(item)
+
+    def setMainPlot(self, imgc):
+        self.mainPlot.addItem(imgc)
+
+    def addToTable(self, item):
+        rowPosition = self.contoursList.rowCount()
+        self.contoursList.insertRow(rowPosition)
+        self.contoursList.setItem(rowPosition, 0, QtGui.QTableWidgetItem(
+            str(rowPosition)))
+        self.tableWidget.setItem(rowPosition, 1, QtGui.QTableWidgetItem(
+            '%.1f' % float(item[0])))
+        self.tableWidget.setItem(rowPosition, 2, QtGui.QTableWidgetItem(
+            '%.1f' % float(item[1])))
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
@@ -141,10 +169,3 @@ class MainWindow(object):
         self.menuAbout.setTitle(_translate("MainWindow", "About", None))
         self.actionClose.setText(_translate("MainWindow", "Close", None))
         self.actionHelp.setText(_translate("MainWindow", "Help", None))
-
-
-if __name__ == '__main__':
-    app = QtGui.QApplication(sys.argv)
-    main = Main()
-    main.show()
-    sys.exit(app.exec_())

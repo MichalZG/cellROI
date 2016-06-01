@@ -3,7 +3,7 @@ from skimage import io, color
 import numpy as np
 import os
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.Qt import QtGui
 # from skimage.filters import threshold_otsu
 from skimage.filters import threshold_adaptive
 from skimage import measure
@@ -12,107 +12,18 @@ from skimage.draw import polygon
 from skimage import transform
 import cv2
 import glob
+import gui
+import sys
 script_path = os.path.dirname(os.path.realpath(__file__))
 work_dir = os.path.curdir
 
 
-# pg.mkQApp()
-# win = pg.GraphicsWindow()
-app = QtGui.QApplication([])
-# win = QtGui.QWidget()
-
-
-class MainWindow(QtGui.QWidget):
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
-        self.resize(1000, 1200)
-        self.w1 = QtGui.QGridLayout()
-        self.setLayout(self.w1)
-
-        self.mainPlot = pg.PlotWidget()
-        self.mainPlot.setAspectLocked()
-        self.mainPlot.setMouseEnabled(x=False, y=False)
-
-        self.histogram = pg.HistogramLUTWidget()
-
-        self.roiPlot = pg.PlotWidget()
-        self.roiPlot.setAspectLocked()
-        self.roiPlot.setMouseEnabled(x=False, y=False)
-
-        self.contourPlot = pg.PlotWidget()
-        self.contourPlot.setAspectLocked()
-        self.contourPlot.setMouseEnabled(x=False, y=False)
-
-        self.rcheck = QtGui.QCheckBox('Plot contour')
-
-        # List widget
-        self.listWidget = QtGui.QListWidget()
-        # Table widget
-        self.tableWidget = QtGui.QTableWidget()
-        self.tableWidget.setColumnCount(3)
-        # comboBox widget
-        self.comboWidget = QtGui.QComboBox()
-        self.comboWidget.addItem("ss")
-        self.comboWidget.addItem("ww")
-        # self.tableWidget.setMaximumSize(128, 128)
-        # self.tableWidget.setMaximumWidth(self.tableWidget.sizeHintForColumn(0))
-        # crosshair
-        self.vline = pg.InfiniteLine(angle=90, movable=False)
-        self.hline = pg.InfiniteLine(angle=0, movable=False)
-
-        self.vBox = QtGui.QGridLayout()
-        self.vBox.addWidget(self.listWidget)
-        self.vBox.addWidget(self.tableWidget)
-        self.w1.addWidget(self.mainPlot, 0, 0, 1, 1)
-        self.w1.addWidget(self.histogram, 1, 0)
-        self.w1.addWidget(self.roiPlot, 1, 1)
-        self.w1.addWidget(self.contourPlot, 1, 2)
-        self.w1.addWidget(self.rcheck, 2, 1)
-        self.w1.addLayout(self.vBox, 0, 1)
-        # self.w1.addWidget(self.listWidget, 0, 1)
-        # self.w1.addWidget(self.tableWidget, 0, 2)
-        # self.w1.addWidget(self.comboWidget, 0, 3)
-        # win.addLayout(rcheck)
-
-        # self.mainPlot.addItem(imgc)
-        self.roiImage = pg.ImageItem()
-        self.roiPlot.addItem(self.roiImage)
-        self.contourImage = pg.ImageItem()
-        self.contourPlot.addItem(self.contourImage)
-        self.contourPlot.addItem(self.vline, ignoreBounds=True)
-        self.contourPlot.addItem(self.hline, ignoreBounds=True)
-
-        self.roi = pg.RectROI([100, 100], [100, 100], pen=(0, 9))
-        self.roi.sigRegionChanged.connect(update)
-
-        self.mainPlot.addItem(self.roi)
-
-        self.vb = self.contourImage.getViewBox()
-        self.proxy = pg.SignalProxy(self.contourPlot.scene().sigMouseMoved,
-                                    rateLimit=60, slot=mouseMoved)
-        self.contourPlot.scene().sigMouseClicked.connect(mouseClicked)
-        self.listWidget.currentItemChanged.connect(onItemChanged)
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(updateContours)
-        self.timer.start(0)
-
-    def addItemsToList(self, images):
-        for im in images:
-            item = QtGui.QListWidgetItem("%s" % im)
-            self.listWidget.addItem(item)
-
-    def setMainPlot(self, imgc):
-        self.mainPlot.addItem(imgc)
-
-    def addToTable(self, item):
-        rowPosition = self.tableWidget.rowCount()
-        self.tableWidget.insertRow(rowPosition)
-        self.tableWidget.setItem(rowPosition, 0, QtGui.QTableWidgetItem(
-            str(rowPosition)))
-        self.tableWidget.setItem(rowPosition, 1, QtGui.QTableWidgetItem(
-            '%.1f' % float(item[0])))
-        self.tableWidget.setItem(rowPosition, 2, QtGui.QTableWidgetItem(
-            '%.1f' % float(item[1])))
+class GuiInit(QtGui.QMainWindow):
+    def __init__(self):
+        super(GuiInit, self).__init__()
+        # build ui
+        self.ui = gui.MainWindow()
+        self.ui.setupUi(self)
 
 
 class Image:
@@ -280,17 +191,19 @@ def saveContour(x_roi, y_roi):
 
 
 if __name__ == '__main__':
+    app = QtGui.QApplication(sys.argv)
     images = sorted(glob.glob("*.tif"))
 
     Im = Image(images[0])
     Im.loadData()
-    win = MainWindow()
-
+    win = GuiInit()
+    # win = gui.MainWindow()
+    # win.setupUi()
     img = pg.ImageItem()
     imgc = pg.ImageItem()
     img.setImage(Im.rawData)
     imgc.setImage(Im.cData)
-    win.setMainPlot(imgc)
-    win.addItemsToList(images)
+    win.ui.setMainPlot(imgc)
+    win.ui.addItemsToList(images)
     win.show()
-    app.exec_()
+    sys.exit(app.exec_())
