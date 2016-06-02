@@ -117,6 +117,7 @@ class MainWindow(object):
         # self.roi.sigRegionChanged.connect(update)
 
         self.mainPlot.addItem(self.roi)
+        self.vb = self.contourImage.getViewBox()
 
         self.topLay.addWidget(self.mainPlot)
         self.botLay.addWidget(self.histogram, 0, 0)
@@ -126,24 +127,6 @@ class MainWindow(object):
         self.timer = QtCore.QTimer()
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-    def addItemsToList(self, images):
-        for im in images:
-            item = QtGui.QListWidgetItem("%s" % im)
-            self.imagesList.addItem(item)
-
-    def setMainPlot(self, imgc):
-        self.mainPlot.addItem(imgc)
-
-    def addToTable(self, item):
-        rowPosition = self.contoursList.rowCount()
-        self.contoursList.insertRow(rowPosition)
-        self.contoursList.setItem(rowPosition, 0, QtGui.QTableWidgetItem(
-            str(rowPosition)))
-        self.tableWidget.setItem(rowPosition, 1, QtGui.QTableWidgetItem(
-            '%.1f' % float(item[0])))
-        self.tableWidget.setItem(rowPosition, 2, QtGui.QTableWidgetItem(
-            '%.1f' % float(item[1])))
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow", None))
