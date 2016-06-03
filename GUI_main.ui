@@ -14,10 +14,10 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QComboBox" name="colorChooser">
+   <widget class="QComboBox" name="typeChooser">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>1210</x>
       <y>10</y>
       <width>75</width>
       <height>33</height>
@@ -25,32 +25,22 @@
     </property>
     <item>
      <property name="text">
-      <string>RGB</string>
+      <string>Cell</string>
      </property>
     </item>
     <item>
      <property name="text">
-      <string>R</string>
+      <string>Background</string>
      </property>
     </item>
     <item>
      <property name="text">
-      <string>G</string>
+      <string>Red cell</string>
      </property>
     </item>
     <item>
      <property name="text">
-      <string>B</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>GREY</string>
-     </property>
-    </item>
-    <item>
-     <property name="text">
-      <string>HSV</string>
+      <string>Other</string>
      </property>
     </item>
    </widget>
