@@ -101,7 +101,7 @@ class Region:
         self.mouseCenter = {'x': x, 'y': y}
         self._type = _type
         self.maskArray = None
-        self.imageArray = None
+        self.imagesArrays = {}
         self.contour = None
         self.metaData = {}
 
@@ -123,33 +123,43 @@ def loadData(fName):
 
 
 def update():
-    global roi_coords
-    global roi_copy
-    global roi_b
-    global roi_g
-    global roi_r
-    roi_arr, roi_coords = win.ui.roi.getArrayRegion(
-        Im.colorDict[currColor], imgc, returnMappedCoords=True)
-    roi_b = np.copy(win.ui.roi.getArrayRegion(Im.b, imgc))
-    roi_g = np.copy(win.ui.roi.getArrayRegion(Im.g, imgc))
-    roi_r = np.copy(win.ui.roi.getArrayRegion(Im.r, imgc))
-    roi_copy = np.copy(roi_arr)
-    win.ui.roiImage.setImage(roi_arr)
+    roiArr, roiCoords = getRoi(Im.colorDict[currColor], imgc)
+    win.ui.roiImage.setImage(roiArr)
     win.ui.histogram.setImageItem(win.ui.roiImage)
     win.ui.roiPlot.autoRange()
-    otsu(roi_arr)
+    otsu(roiArr)
+
+
+def getRoi(dataToRoi, imageToRoi):
+    global roiCoords
+    global roiCopy
+    # global roi_b
+    # global roi_g
+    # global roi_r
+    roiArr, roiCoords = win.ui.roi.getArrayRegion(
+        dataToRoi, imageToRoi, returnMappedCoords=True)
+    roiCopy = np.copy(roiArr)
+    roiSliceParam = win.ui.roi.getAffineSliceParams(
+        dataToRoi, imageToRoi)
+    roiSlice = win.ui.roi.getArraySlice(
+        dataToRoi, imageToRoi)
+    # print roi_slice
+    # print roi_slice_param
+    # roi_b = np.copy(win.ui.roi.getArrayRegion(Im.b, imgc))
+    # roi_g = np.copy(win.ui.roi.getArrayRegion(Im.g, imgc))
+    # roi_r = np.copy(win.ui.roi.getArrayRegion(Im.r, imgc))
+    return roiArr, roiCoords
 
 
 def updateContours():
     if win.ui.contourButton.isChecked():
-        roi_arr, roi_coords = win.ui.roi.getArrayRegion(
-            Im.colorDict[currColor], imgc, returnMappedCoords=True)
-        temp_arr = roi_arr
-        contours = otsu(temp_arr)
+        roiArr, roiCoords = getRoi(Im.colorDict[currColor], imgc)
+        tempArr = np.copy(roiArr)
+        contours = otsu(roipArr)
         for c in contours:
             c = c.astype(int)
-            temp_arr[c[:, 0], c[:, 1]] = 1
-        win.ui.roiImage.setImage(temp_arr)
+            tempArr[c[:, 0], c[:, 1]] = 1
+        win.ui.roiImage.setImage(roiArr)
     else:
         pass
         # roi_arr, roi_coords = roi.getArrayRegion(fData, img,
@@ -157,23 +167,23 @@ def updateContours():
         # roiImage.setImage(roi_arr)
 
 
-def otsu(roi_arr):
-    otsu = threshold_adaptive(roi_arr, block_size=100, method='mean')
-    otsu_arr = roi_arr >= otsu
-    otsu_arr = otsu_arr.astype('float64')
-    contours = makeContour(otsu_arr)
+def otsu(roiArr):
+    otsu = threshold_adaptive(roiArr, block_size=100, method='mean')
+    otsuArr = roiArr >= otsu
+    otsuArr = otsuArr.astype('float64')
+    contours = makeContour(otsuArr)
     for c in contours:
         c = c.astype(int)
-        otsu_arr[c[:, 0], c[:, 1]] = 3
-    win.ui.contourImage.setImage(otsu_arr)
+        otsuArr[c[:, 0], c[:, 1]] = 3
+    win.ui.contourImage.setImage(otsuArr)
     win.ui.contourPlot.autoRange()
 
     return contours
 
 
-def makeContour(otsu_arr):
+def makeContour(otsuArr):
     global contours
-    contours = measure.find_contours(otsu_arr, 0.99)
+    contours = measure.find_contours(otsuArr, 0.99)
 
     return contours
 
@@ -191,19 +201,23 @@ def mouseMoved(evt):
 
 def mouseClicked(evt):
     items = win.ui.vb.scene().items(evt.scenePos())
-    x_roi = items[1].x()
-    y_roi = items[0].y()
-    print x_roi, y_roi
-    x_global = roi_coords[0][x_roi][y_roi]
-    y_global = roi_coords[1][x_roi][y_roi]
-    region = Region(currRegionType, x_global, y_global)
+    xRoi = items[1].x()
+    yRoi = items[0].y()
+    print xRoi, yRoi
+    xRoiGlobal = roiCoords[0][xRoi][yRoi]
+    yRoiGlobal = roiCoords[1][xRoi][yRoi]
+    region = Region(currRegionType, xRoiGlobal, yRoiGlobal)
     if region._type in ('Cell', 'Red Cell', 'Other'):
-        if checkContour(x_roi, y_roi):
+        contour = checkContour(xRoi, yRoi)
+        if contour is not None:
             itemToList = "%s, %.1f, %.1f" % (region._type,
                                              region.mouseCenter['x'],
                                              region.mouseCenter['y'])
             # itemToList = "%s, %.1f, %.1f" % ("Cell", x_global, y_global)
             win.addItemsToList(win.ui.contoursList, [itemToList])
+            region.metaData['color'] = currColor
+            region.contour = contour
+            makeRegionData(region)
             Im.addRegion(region)
     else:
         itemToList = "%s, %.1f, %.1f" % (region._type,
@@ -232,34 +246,39 @@ def onItemChanged(curr, prev):
     # win.setMainPlot(imgc)
 
 
-def checkContour(x_roi, y_roi):
+def checkContour(xRoi, yRoi):
     # check = False
-    for c in contours:
-        if measure.points_in_poly([[x_roi, y_roi]], c):
-            return True
+    for contour in contours:
+        if measure.points_in_poly([[xRoi, yRoi]], contour):
+            return contour
 
 
 def makeRegionData(region, nobkg=True):
     # check = False
     if nobkg:
-        mask = np.zeros_like(roi_copy)
-        out = np.zeros_like(roi_copy)
-        out_b = np.zeros_like(roi_copy)
-        out_g = np.zeros_like(roi_copy)
-        out_r = np.zeros_like(roi_copy)
-        rr, cc = polygon(c[:, 0], c[:, 1])
-        mask[rr, cc] = 1
-        out_b[mask == 1] = roi_b[mask == 1]
-        out_g[mask == 1] = roi_g[mask == 1]
-        out_r[mask == 1] = roi_r[mask == 1]
-        out[mask == 1] = roi_copy[mask == 1]
-        np.savetxt('t.txt', c)
-        io.imsave('b.bmp', out_b)
-        io.imsave('g.bmp', out_g)
-        io.imsave('r.bmp', out_r)
-        out_rgb = cv2.merge((out_b, out_g, out_r))
-        io.imsave('out_rgb.bmp', out_rgb)
-        io.imsave('out_grey.bmp', out)
+        for c, arr in Im.colorDict.iteritems():
+            if c not in ('RGB', 'HSV'):
+                mask = np.zeros_like(roiCopy)
+                out = np.zeros_like(roiCopy)
+                rr, cc = polygon(region.contour[:, 0],
+                                 region.contour[:, 1])
+                # out_b = np.zeros_like(roiCopy)
+                # out_g = np.zeros_like(roiCopy)
+                # out_r = np.zeros_like(roiCopy)
+                mask[rr, cc] = 1
+                print c, arr
+                roiArr, roiCoords = getRoi(arr, imgc)
+
+                # out_b[mask == 1] = roi_b[mask == 1]
+                # out_g[mask == 1] = roi_g[mask == 1]
+                # out_r[mask == 1] = roi_r[mask == 1]
+                out[mask == 1] = roiArr[mask == 1]
+                # region.imagesArrays[
+                np.savetxt('.'.join((c, 'txt')), region.contour)
+                io.imsave('.'.join((c, 'bmp')), out)
+                # out_rgb = cv2.merge((out_b, out_g, out_r))
+                # io.imsave('out_rgb.bmp', out_rgb)
+                # io.imsave('out_grey.bmp', out)
 
 
 def colorChoose():
