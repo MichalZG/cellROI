@@ -64,6 +64,7 @@ class GuiInit(QtGui.QMainWindow):
 class Image:
     def __init__(self, fileName):
         self.regions = []
+        self.regionsCounter = {}
         self.fileName = fileName
 
     def loadData(self):
@@ -119,20 +120,30 @@ class Region:
         self.contour = None
         self.metaData = {}
         self.regionImage = None
+        self.number = 0
 
     def saveRegion(self):
         folderName = os.path.basename(self.regionImage.fileName).split('.')[0]
         pathToSave = os.path.join(workDir, folderName)
         for c, arr in self.imagesArrays.iteritems():
-            io.imsave(os.path.join(pathToSave, '.'.join((c, 'bmp'))), arr)
+            io.imsave(os.path.join(pathToSave,
+                                   '_'.join((
+                                       self._type,
+                                       str(self.number),
+                                       c, 'image.bmp'))), arr)
         if self.contour is not None:
-            np.savetxt(os.path.join(pathToSave, 'contour.dat'), self.contour)
-        np.savetxt(os.path.join(pathToSave, 'mask.dat'), self.mask)
-        print self.metaData
+            np.savetxt(os.path.join(pathToSave,
+                                    '_'.join((self._type,
+                                              str(self.number),
+                                              'contour.dat'))), self.contour)
+        np.savetxt(os.path.join(pathToSave,
+                                '_'.join((self._type,
+                                          str(self.number),
+                                          'mask.dat'))), self.mask)
         # pickle.dump(self.metaData,
         #            open(os.path.join(pathToSave, 'metaData.dat'), 'wb'))
         writer = csv.writer(open(os.path.join(pathToSave, 'metaData.dat'),
-                                 'wb'))
+                                 'wb'), delimiter=':')
         for k, v in self.metaData.iteritems():
             writer.writerow([k, v])
 
@@ -186,11 +197,12 @@ def updateContours():
     if win.ui.contourButton.isChecked():
         roiArr, roiCoords = getRoi(Im.colorDict[currColor], imgc)
         tempArr = np.copy(roiArr)
-        contours = otsu(roipArr)
+        contours = otsu(roiArr)
         for c in contours:
+            print c
             c = c.astype(int)
             tempArr[c[:, 0], c[:, 1]] = 1
-        win.ui.roiImage.setImage(roiArr)
+        win.ui.roiImage.setImage(tempArr)
     else:
         pass
         # roi_arr, roi_coords = roi.getArrayRegion(fData, img,
@@ -256,6 +268,8 @@ def mouseClicked(evt):
                                          region.mouseCenter['y'])
         # itemToList = "%s, %.1f, %.1f" % ("Cell", x_global, y_global)
         win.addItemsToList(win.ui.contoursList, [itemToList])
+        region.metaData['color'] = currColor
+        makeRegionData(region, nobkg=False)
         Im.addRegion(region)
 
 
@@ -303,15 +317,20 @@ def makeRegionData(region, nobkg=True):
                 out[mask == 1] = roiArr[mask == 1]
                 region.imagesArrays[c] = out
     else:
-        mask = np.zeros_like(roiCopy)
-        mask = np.full(mask.shape, 1)
-        out = np.zeros_like(roiCopy)
         for c, arr in Im.colorDict.iteritems():
-            roiArr, roiCoords = getRoi(arr, imgc)
-            out[mask == 1] = roiArr[mask == 1]
-            region.imagesArrays[c] = out
+            if c not in ('RGB', 'HSV'):
+                mask = np.full(roiCopy.shape, 1)
+                roiArr, roiCoords = getRoi(arr, imgc)
+                out = np.copy(roiArr)
+                region.imagesArrays[c] = out
+
+    if region._type not in Im.regionsCounter:
+        Im.regionsCounter[region._type] = 1
+    else:
+        Im.regionsCounter[region._type] += 1
 
     region.regionImage = Im
+    region.number = Im.regionsCounter[region._type]
     region.mask = mask
     region.metaData['shapeWidth'] = roiSliceParam[0][0]
     region.metaData['shapeLength'] = roiSliceParam[0][1]
