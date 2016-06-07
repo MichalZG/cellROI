@@ -14,8 +14,11 @@ import cv2
 import glob
 import gui
 import sys
-script_path = os.path.dirname(os.path.realpath(__file__))
-work_dir = os.path.curdir
+# import pickle
+import csv
+
+scriptPath = os.path.dirname(os.path.realpath(__file__))
+workDir = os.getcwd()
 
 
 class GuiInit(QtGui.QMainWindow):
@@ -32,6 +35,7 @@ class GuiInit(QtGui.QMainWindow):
         self.ui.contourPlot.scene().sigMouseClicked.connect(mouseClicked)
         self.ui.colorChooser.currentIndexChanged.connect(colorChoose)
         self.ui.typeChooser.currentIndexChanged.connect(typeChoose)
+        self.ui.saveContourButton.clicked.connect(saveContour)
         self.ui.timer.timeout.connect(updateContours)
         self.ui.timer.start(0)
 
@@ -95,6 +99,16 @@ class Image:
     def addRegion(self, region):
         self.regions.append(region)
 
+    def saveImageRegions(self):
+        try:
+            os.mkdir(os.path.join(workDir, os.path.basename(
+                self.fileName.split('.')[0])))
+        except OSError:
+            pass
+
+        for r in self.regions:
+            r.saveRegion()
+
 
 class Region:
     def __init__(self, _type, x, y):
@@ -104,9 +118,23 @@ class Region:
         self.imagesArrays = {}
         self.contour = None
         self.metaData = {}
+        self.regionImage = None
 
     def saveRegion(self):
-        pass
+        folderName = os.path.basename(self.regionImage.fileName).split('.')[0]
+        pathToSave = os.path.join(workDir, folderName)
+        for c, arr in self.imagesArrays.iteritems():
+            io.imsave(os.path.join(pathToSave, '.'.join((c, 'bmp'))), arr)
+        if self.contour is not None:
+            np.savetxt(os.path.join(pathToSave, 'contour.dat'), self.contour)
+        np.savetxt(os.path.join(pathToSave, 'mask.dat'), self.mask)
+        print self.metaData
+        # pickle.dump(self.metaData,
+        #            open(os.path.join(pathToSave, 'metaData.dat'), 'wb'))
+        writer = csv.writer(open(os.path.join(pathToSave, 'metaData.dat'),
+                                 'wb'))
+        for k, v in self.metaData.iteritems():
+            writer.writerow([k, v])
 
 
 def loadData(fName):
@@ -133,6 +161,8 @@ def update():
 def getRoi(dataToRoi, imageToRoi):
     global roiCoords
     global roiCopy
+    global roiSliceParam
+    global roiSlice
     # global roi_b
     # global roi_g
     # global roi_r
@@ -142,7 +172,8 @@ def getRoi(dataToRoi, imageToRoi):
     roiSliceParam = win.ui.roi.getAffineSliceParams(
         dataToRoi, imageToRoi)
     roiSlice = win.ui.roi.getArraySlice(
-        dataToRoi, imageToRoi)
+        dataToRoi, imageToRoi, returnSlice=False)
+    # print roiSliceParam[0][0], roiSliceParam[0][1]
     # print roi_slice
     # print roi_slice_param
     # roi_b = np.copy(win.ui.roi.getArrayRegion(Im.b, imgc))
@@ -253,32 +284,57 @@ def checkContour(xRoi, yRoi):
             return contour
 
 
+def saveContour():
+    Im.saveImageRegions()
+
+
 def makeRegionData(region, nobkg=True):
     # check = False
     if nobkg:
+        rr, cc = polygon(region.contour[:, 0],
+                         region.contour[:, 1])
         for c, arr in Im.colorDict.iteritems():
             if c not in ('RGB', 'HSV'):
                 mask = np.zeros_like(roiCopy)
                 out = np.zeros_like(roiCopy)
-                rr, cc = polygon(region.contour[:, 0],
-                                 region.contour[:, 1])
-                # out_b = np.zeros_like(roiCopy)
-                # out_g = np.zeros_like(roiCopy)
-                # out_r = np.zeros_like(roiCopy)
-                mask[rr, cc] = 1
-                print c, arr
-                roiArr, roiCoords = getRoi(arr, imgc)
 
-                # out_b[mask == 1] = roi_b[mask == 1]
-                # out_g[mask == 1] = roi_g[mask == 1]
-                # out_r[mask == 1] = roi_r[mask == 1]
+                mask[rr, cc] = 1
+                roiArr, roiCoords = getRoi(arr, imgc)
                 out[mask == 1] = roiArr[mask == 1]
-                # region.imagesArrays[
-                np.savetxt('.'.join((c, 'txt')), region.contour)
-                io.imsave('.'.join((c, 'bmp')), out)
-                # out_rgb = cv2.merge((out_b, out_g, out_r))
-                # io.imsave('out_rgb.bmp', out_rgb)
-                # io.imsave('out_grey.bmp', out)
+                region.imagesArrays[c] = out
+    else:
+        mask = np.zeros_like(roiCopy)
+        mask = np.full(mask.shape, 1)
+        out = np.zeros_like(roiCopy)
+        for c, arr in Im.colorDict.iteritems():
+            roiArr, roiCoords = getRoi(arr, imgc)
+            out[mask == 1] = roiArr[mask == 1]
+            region.imagesArrays[c] = out
+
+    region.regionImage = Im
+    region.mask = mask
+    region.metaData['shapeWidth'] = roiSliceParam[0][0]
+    region.metaData['shapeLength'] = roiSliceParam[0][1]
+    region.metaData['xStart'] = roiSlice[0][0][0]
+    region.metaData['xEnd'] = roiSlice[0][0][1]
+    region.metaData['yStart'] = roiSlice[0][1][0]
+    region.metaData['yEnd'] = roiSlice[0][1][1]
+
+    # np.savetxt('.'.join((c, 'txt')), region.contour)
+    # io.imsave('.'.join((c, 'bmp')), out)
+    out_rgb = cv2.merge((region.imagesArrays['B'],
+                         region.imagesArrays['G'],
+                         region.imagesArrays['R']))
+
+    out_hsv = cv2.merge((region.imagesArrays['V'],
+                         region.imagesArrays['S'],
+                         region.imagesArrays['H']))
+
+    region.imagesArrays['RGB'] = out_rgb
+    region.imagesArrays['HSV'] = out_hsv
+
+    # io.imsave('out_rgb.bmp', out_rgb)
+    # io.imsave('out_grey.bmp', out)
 
 
 def colorChoose():
