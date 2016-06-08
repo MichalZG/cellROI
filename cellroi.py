@@ -16,6 +16,8 @@ import gui
 import sys
 # import pickle
 import csv
+from PIL import Image as PI
+import PIL
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 workDir = os.getcwd()
@@ -68,24 +70,40 @@ class Image:
         self.fileName = fileName
 
     def loadData(self):
-        self.rawData = io.imread(self.fileName)
-        self.cData = self.rawData.copy()
+        # self.rawData = io.imread(self.fileName)
+        self.rawData = PI.open(self.fileName)
+        # self.cData = self.rawData.copy()
+        self.cData = self.rawData
         self.grayData = self.rawData.copy()
-        self.grayData = color.rgb2gray(self.rawData)
-        self.grayData = transform.rotate(self.grayData, angle=90,
-                                         clip=False, resize=True)
-        self.cData = transform.rotate(self.cData, angle=90,
-                                      clip=False, resize=True)
+        # self.grayData = color.rgb2gray(self.rawData)
+        self.grayData = self.grayData.convert('LA')
+        self.grayData = self.grayData.transpose(method=PIL.Image.TRANSPOSE)
+        # self.grayData = transform.rotate(self.grayData, angle=270,
+        #                                  clip=False, resize=True)
+        # self.cData = transform.rotate(self.cData, angle=270,
+        #                               clip=False, resize=True)
+        self.cData = self.cData.transpose(method=PIL.Image.TRANSPOSE)
         self.hsvData = color.rgb2hsv(self.rawData)
-        self.hsvData = transform.rotate(self.hsvData, angle=90,
-                                        clip=False, resize=True)
+        # self.hsvData = transform.rotate(self.hsvData, angle=270,
+        #                                 clip=False, resize=True)
+        # self.hsvData = cv2.flip(self.hsvData, 1)
+        # self.grayData = self.grayData[:, ::-1].T
+        # self.cData = self.cData[:, ::-1].T
+        # self.hsvData = self.hsvData[:, ::-1].T
+        # self.b = self.cData[:, :, 0]
+        # self.g = self.cData[:, :, 1]
+        # self.r = self.cData[:, :, 2]
+        # self.h = self.hsvData[:, :, 0]
+        # self.s = self.hsvData[:, :, 1]
+        # self.v = self.hsvData[:, :, 2]
+        self.cData = list(self.cData.getdata())
+        self.b = self.cData[2]
+        self.g = self.cData[1]
+        self.r = self.cData[0]
+        # self.h = self.hsvData[:, :, 0]
+        # self.s = self.hsvData[:, :, 1]
+        # self.v = self.hsvData[:, :, 2]
 
-        self.b = self.cData[:, :, 0]
-        self.g = self.cData[:, :, 1]
-        self.r = self.cData[:, :, 2]
-        self.h = self.hsvData[:, :, 0]
-        self.s = self.hsvData[:, :, 1]
-        self.v = self.hsvData[:, :, 2]
 
         self.colorDict = {'RGB': self.cData,
                           'GRAY': self.grayData,
@@ -142,23 +160,13 @@ class Region:
                                           'mask.dat'))), self.mask)
         # pickle.dump(self.metaData,
         #            open(os.path.join(pathToSave, 'metaData.dat'), 'wb'))
-        writer = csv.writer(open(os.path.join(pathToSave, 'metaData.dat'),
+        writer = csv.writer(open(os.path.join(pathToSave,
+                                              '_'.join((self._type,
+                                                       str(self.number),
+                                                       'metaData.dat'))),
                                  'wb'), delimiter=':')
         for k, v in self.metaData.iteritems():
             writer.writerow([k, v])
-
-
-def loadData(fName):
-    fData = io.imread(fName)
-    cData = fData.copy()
-    fData = color.rgb2gray(fData)
-    # fData = fData[:, ::-1].T
-    fData = transform.rotate(fData, angle=90, clip=False, resize=True)
-    # fData = np.transpose(fData)
-    cData = transform.rotate(cData, angle=90, clip=False, resize=True)
-    # cData = cData[:, :, 2]
-    # cData = cData.astype('float64')
-    return fData, cData
 
 
 def update():
