@@ -16,8 +16,6 @@ import gui
 import sys
 # import pickle
 import csv
-from PIL import Image as PI
-import PIL
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 workDir = os.getcwd()
@@ -70,40 +68,25 @@ class Image:
         self.fileName = fileName
 
     def loadData(self):
-        # self.rawData = io.imread(self.fileName)
-        self.rawData = PI.open(self.fileName)
-        # self.cData = self.rawData.copy()
-        self.cData = self.rawData
+        self.rawData = io.imread(self.fileName)
+        self.rawData = cv2.merge((self.rawData[:, :, 0].T,
+                                  self.rawData[:, :, 1].T,
+                                  self.rawData[:, :, 2].T))
+        self.cData = self.rawData.copy()
         self.grayData = self.rawData.copy()
-        # self.grayData = color.rgb2gray(self.rawData)
-        self.grayData = self.grayData.convert('LA')
-        self.grayData = self.grayData.transpose(method=PIL.Image.TRANSPOSE)
-        # self.grayData = transform.rotate(self.grayData, angle=270,
-        #                                  clip=False, resize=True)
-        # self.cData = transform.rotate(self.cData, angle=270,
-        #                               clip=False, resize=True)
-        self.cData = self.cData.transpose(method=PIL.Image.TRANSPOSE)
+        self.grayData = color.rgb2gray(self.rawData)
         self.hsvData = color.rgb2hsv(self.rawData)
-        # self.hsvData = transform.rotate(self.hsvData, angle=270,
-        #                                 clip=False, resize=True)
-        # self.hsvData = cv2.flip(self.hsvData, 1)
-        # self.grayData = self.grayData[:, ::-1].T
-        # self.cData = self.cData[:, ::-1].T
-        # self.hsvData = self.hsvData[:, ::-1].T
-        # self.b = self.cData[:, :, 0]
-        # self.g = self.cData[:, :, 1]
-        # self.r = self.cData[:, :, 2]
-        # self.h = self.hsvData[:, :, 0]
-        # self.s = self.hsvData[:, :, 1]
-        # self.v = self.hsvData[:, :, 2]
-        self.cData = list(self.cData.getdata())
-        self.b = self.cData[2]
-        self.g = self.cData[1]
-        self.r = self.cData[0]
-        # self.h = self.hsvData[:, :, 0]
-        # self.s = self.hsvData[:, :, 1]
-        # self.v = self.hsvData[:, :, 2]
-
+        # self.grayData = self.grayData.convert('LA')
+        # self.grayData = self.grayData.transpose(method=PIL.Image.TRANSPOSE)
+        self.grayData = transform.rotate(self.grayData, angle=0)
+        self.cData = transform.rotate(self.cData, angle=0)
+        self.hsvData = transform.rotate(self.hsvData, angle=0)
+        self.b = self.cData[:, :, 0]
+        self.g = self.cData[:, :, 1]
+        self.r = self.cData[:, :, 2]
+        self.h = self.hsvData[:, :, 0]
+        self.s = self.hsvData[:, :, 1]
+        self.v = self.hsvData[:, :, 2]
 
         self.colorDict = {'RGB': self.cData,
                           'GRAY': self.grayData,
@@ -141,14 +124,16 @@ class Region:
         self.number = 0
 
     def saveRegion(self):
-        folderName = os.path.basename(self.regionImage.fileName).split('.')[0]
-        pathToSave = os.path.join(workDir, folderName)
+        imageBaseName = os.path.basename(
+            self.regionImage.fileName).split('.')[0]
+        print imageBaseName
+        pathToSave = os.path.join(workDir, imageBaseName)
         for c, arr in self.imagesArrays.iteritems():
             io.imsave(os.path.join(pathToSave,
                                    '_'.join((
                                        self._type,
                                        str(self.number),
-                                       c, 'image.bmp'))), arr)
+                                       c, imageBaseName+'.bmp'))), arr)
         if self.contour is not None:
             np.savetxt(os.path.join(pathToSave,
                                     '_'.join((self._type,
@@ -174,7 +159,7 @@ def update():
     win.ui.roiImage.setImage(roiArr)
     win.ui.histogram.setImageItem(win.ui.roiImage)
     win.ui.roiPlot.autoRange()
-    otsu(roiArr)
+    threshold(roiArr)
 
 
 def getRoi(dataToRoi, imageToRoi):
@@ -182,9 +167,6 @@ def getRoi(dataToRoi, imageToRoi):
     global roiCopy
     global roiSliceParam
     global roiSlice
-    # global roi_b
-    # global roi_g
-    # global roi_r
     roiArr, roiCoords = win.ui.roi.getArrayRegion(
         dataToRoi, imageToRoi, returnMappedCoords=True)
     roiCopy = np.copy(roiArr)
@@ -192,12 +174,7 @@ def getRoi(dataToRoi, imageToRoi):
         dataToRoi, imageToRoi)
     roiSlice = win.ui.roi.getArraySlice(
         dataToRoi, imageToRoi, returnSlice=False)
-    # print roiSliceParam[0][0], roiSliceParam[0][1]
-    # print roi_slice
-    # print roi_slice_param
-    # roi_b = np.copy(win.ui.roi.getArrayRegion(Im.b, imgc))
-    # roi_g = np.copy(win.ui.roi.getArrayRegion(Im.g, imgc))
-    # roi_r = np.copy(win.ui.roi.getArrayRegion(Im.r, imgc))
+
     return roiArr, roiCoords
 
 
@@ -205,9 +182,8 @@ def updateContours():
     if win.ui.contourButton.isChecked():
         roiArr, roiCoords = getRoi(Im.colorDict[currColor], imgc)
         tempArr = np.copy(roiArr)
-        contours = otsu(roiArr)
+        contours = threshold(roiArr)
         for c in contours:
-            print c
             c = c.astype(int)
             tempArr[c[:, 0], c[:, 1]] = 1
         win.ui.roiImage.setImage(tempArr)
@@ -218,7 +194,7 @@ def updateContours():
         # roiImage.setImage(roi_arr)
 
 
-def otsu(roiArr):
+def threshold(roiArr):
     otsu = threshold_adaptive(roiArr, block_size=100, method='mean')
     otsuArr = roiArr >= otsu
     otsuArr = otsuArr.astype('float64')
@@ -320,17 +296,18 @@ def makeRegionData(region, nobkg=True):
                 mask = np.zeros_like(roiCopy)
                 out = np.zeros_like(roiCopy)
 
+                region.imagesArrays[c+'_nomask'] = roiCopy
                 mask[rr, cc] = 1
                 roiArr, roiCoords = getRoi(arr, imgc)
                 out[mask == 1] = roiArr[mask == 1]
-                region.imagesArrays[c] = out
+                region.imagesArrays[c+'_mask'] = out
     else:
         for c, arr in Im.colorDict.iteritems():
             if c not in ('RGB', 'HSV'):
                 mask = np.full(roiCopy.shape, 1)
                 roiArr, roiCoords = getRoi(arr, imgc)
                 out = np.copy(roiArr)
-                region.imagesArrays[c] = out
+                region.imagesArrays[c+'_nomask'] = out
 
     if region._type not in Im.regionsCounter:
         Im.regionsCounter[region._type] = 1
@@ -349,17 +326,27 @@ def makeRegionData(region, nobkg=True):
 
     # np.savetxt('.'.join((c, 'txt')), region.contour)
     # io.imsave('.'.join((c, 'bmp')), out)
-    out_rgb = cv2.merge((region.imagesArrays['B'],
-                         region.imagesArrays['G'],
-                         region.imagesArrays['R']))
+    if nobkg:
+        out_rgb_mask = cv2.merge((region.imagesArrays['B_mask'],
+                                  region.imagesArrays['G_mask'],
+                                  region.imagesArrays['R_mask']))
 
-    out_hsv = cv2.merge((region.imagesArrays['V'],
-                         region.imagesArrays['S'],
-                         region.imagesArrays['H']))
+        out_hsv_mask = cv2.merge((region.imagesArrays['V_mask'],
+                                  region.imagesArrays['S_mask'],
+                                  region.imagesArrays['H_mask']))
+        region.imagesArrays['RGB_mask'] = out_rgb_mask
+        region.imagesArrays['HSV_mask'] = out_hsv_mask
 
-    region.imagesArrays['RGB'] = out_rgb
-    region.imagesArrays['HSV'] = out_hsv
+    out_rgb_nomask = cv2.merge((region.imagesArrays['B_nomask'],
+                                region.imagesArrays['G_nomask'],
+                                region.imagesArrays['R_nomask']))
 
+    out_hsv_nomask = cv2.merge((region.imagesArrays['V_nomask'],
+                                region.imagesArrays['S_nomask'],
+                                region.imagesArrays['H_nomask']))
+
+    region.imagesArrays['RGB_nomask'] = out_rgb_nomask
+    region.imagesArrays['HSV_nomask'] = out_hsv_nomask
     # io.imsave('out_rgb.bmp', out_rgb)
     # io.imsave('out_grey.bmp', out)
 
