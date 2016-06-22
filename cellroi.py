@@ -16,6 +16,7 @@ import gui
 import sys
 # import pickle
 import csv
+import collections
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 workDir = os.getcwd()
@@ -36,6 +37,9 @@ class GuiInit(QtGui.QMainWindow):
         self.ui.colorChooser.currentIndexChanged.connect(colorChoose)
         self.ui.typeChooser.currentIndexChanged.connect(typeChoose)
         self.ui.saveContourButton.clicked.connect(saveContour)
+        self.ui.saveAllContourButton.clicked.connect(saveAllContour)
+        self.ui.deleteContourButton.clicked.connect(deleteContour)
+        self.ui.deleteAllContourButton.clicked.connect(deleteAllContour)
         self.ui.timer.timeout.connect(updateContours)
         self.ui.timer.start(0)
 
@@ -98,6 +102,34 @@ class Image:
                           'S': self.s,
                           'V': self.v}
 
+    def loadRegions(self):
+        try:
+            regionsList = np.loadtxt(os.path.join(workDir, os.path.basename(
+                self.fileName.split('.')[0]), 'regions_list.dat'),
+                dtype='string', delimiter=',', ndmin=2)
+            print 'loading regions...'
+
+            for rData in regionsList:
+                region = Region(rData[0], float(rData[1]),
+                                float(rData[2]))
+                region.imOld = True
+                region.number = int(rData[3])
+                itemToList = "%s, %i, %.1f, %.1f" % (region._type,
+                                                     region.number,
+                                                     region.mouseCenter['x'],
+                                                     region.mouseCenter['y'])
+                win.addItemsToList(win.ui.contoursList, [itemToList])
+
+                self.addRegion(region)
+                if region._type in self.regionsCounter:
+                    if region._type > self.regionsCounter[region._type]:
+                        self.regionsCounter[region._type] = region.number
+                else:
+                    self.regionsCounter[region._type] = region.number
+
+        except IOError:
+            print 'no regions found!'
+
     def addRegion(self, region):
         self.regions.append(region)
 
@@ -108,8 +140,19 @@ class Image:
         except OSError:
             pass
 
-        for r in self.regions:
-            r.saveRegion()
+        with open(os.path.join(workDir,
+                               os.path.basename(
+                                   self.fileName.split('.')[0]),
+                               'regions_list.dat'), 'w') as f:
+            for region in self.regions:
+                print region.mouseCenter['x'], type(region.mouseCenter['x'])
+                f.write(','.join((region._type,
+                                 str(region.mouseCenter['x']),
+                                 str(region.mouseCenter['y']),
+                                 str(region.number)+'\n')))
+        for region in self.regions:
+            if not region.imOld:
+                region.saveRegion()
 
 
 class Region:
@@ -121,6 +164,7 @@ class Region:
         self.contour = None
         self.metaData = {}
         self.regionImage = None
+        self.imOld = False
         self.number = 0
 
     def saveRegion(self):
@@ -150,7 +194,10 @@ class Region:
                                                        str(self.number),
                                                        'metaData.dat'))),
                                  'wb'), delimiter=':')
-        for k, v in self.metaData.iteritems():
+
+        self.sortedmetaData = collections.OrderedDict(sorted(
+            self.metaData.items()))
+        for k, v in self.sortedmetaData.iteritems():
             writer.writerow([k, v])
 
 
@@ -237,23 +284,23 @@ def mouseClicked(evt):
     if region._type in ('Cell', 'Red Cell', 'Other'):
         contour = checkContour(xRoi, yRoi)
         if contour is not None:
-            itemToList = "%s, %.1f, %.1f" % (region._type,
-                                             region.mouseCenter['x'],
-                                             region.mouseCenter['y'])
-            # itemToList = "%s, %.1f, %.1f" % ("Cell", x_global, y_global)
-            win.addItemsToList(win.ui.contoursList, [itemToList])
             region.metaData['color'] = currColor
             region.contour = contour
             makeRegionData(region)
+            itemToList = "%s, %i, %.1f, %.1f" % (region._type,
+                                                 region.number,
+                                                 region.mouseCenter['x'],
+                                                 region.mouseCenter['y'])
+            win.addItemsToList(win.ui.contoursList, [itemToList])
             Im.addRegion(region)
     else:
-        itemToList = "%s, %.1f, %.1f" % (region._type,
-                                         region.mouseCenter['x'],
-                                         region.mouseCenter['y'])
-        # itemToList = "%s, %.1f, %.1f" % ("Cell", x_global, y_global)
-        win.addItemsToList(win.ui.contoursList, [itemToList])
         region.metaData['color'] = currColor
         makeRegionData(region, nobkg=False)
+        itemToList = "%s, %i, %.1f, %.1f" % (region._type,
+                                             region.number,
+                                             region.mouseCenter['x'],
+                                             region.mouseCenter['y'])
+        win.addItemsToList(win.ui.contoursList, [itemToList])
         Im.addRegion(region)
 
 
@@ -268,9 +315,10 @@ def onItemChanged(curr, prev):
     win.clearList(win.ui.contoursList)
     if Im.regions:
         for region in Im.regions:
-            itemToList = "%s, %.1f, %.1f" % (region._type,
-                                             region.mouseCenter['x'],
-                                             region.mouseCenter['y'])
+            itemToList = "%s, %i, %.1f, %.1f" % (region._type,
+                                                 region.number,
+                                                 region.mouseCenter['x'],
+                                                 region.mouseCenter['y'])
             win.addItemsToList(win.ui.contoursList, [itemToList])
     # win.setMainPlot(imgc)
 
@@ -280,10 +328,58 @@ def checkContour(xRoi, yRoi):
     for contour in contours:
         if measure.points_in_poly([[xRoi, yRoi]], contour):
             return contour
+    Im.saveImageRegions()
 
 
 def saveContour():
     Im.saveImageRegions()
+
+
+def saveAllContour():
+    for image, im in imagesContener.iteritems():
+        if im.regions:
+            im.saveImageRegions()
+
+
+def deleteContour():
+    currItemText = win.ui.contoursList.currentItem().text().split(', ')
+    win.ui.contoursList.takeItem(win.ui.contoursList.currentRow())
+    _type, number = currItemText[0], currItemText[1]
+
+    for i, region in enumerate(Im.regions):
+        if (str(region._type) == str(_type) and str(region.number) == str(number)):
+
+            del Im.regions[i]
+            files = glob.glob(os.path.join(workDir,
+                                           os.path.basename(
+                                               Im.fileName.split('.')[0]),
+                                           str(_type) + '_' +
+                                           str(number) + '*.*'))
+            for f in files:
+                os.remove(f)
+
+            with open(os.path.join(workDir,
+                                   os.path.basename(
+                                       Im.fileName.split('.')[0]),
+                                   'regions_list.dat'), 'w') as f:
+                for region in Im.regions:
+                    f.write(','.join((region._type,
+                                     str(region.mouseCenter['x']),
+                                     str(region.mouseCenter['y']),
+                                     str(region.number)+'\n')))
+
+
+def deleteAllContour():
+    Im.regions = []
+    files = glob.glob(os.path.join(workDir,
+                                   os.path.basename(
+                                       Im.fileName.split('.')[0]), '*.*'))
+    for f in files:
+        os.remove(f)
+
+    for k, v in Im.regionsCounter.iteritems():
+        Im.regionsCounter[k] = 0
+    win.clearList(win.ui.contoursList)
 
 
 def makeRegionData(region, nobkg=True):
@@ -366,15 +462,16 @@ def typeChoose():
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
+    win = GuiInit()
     images = sorted(glob.glob("*.tif"))
     imagesContener = {}
     currColor = 'GRAY'
     currRegionType = 'Cell'
     for image in images:
-        imagesContener[image] = Image(image)
-    Im = imagesContener.values()[0]
+        Im = Image(image)
+        imagesContener[image] = Im
+        Im.loadRegions()
     Im.loadData()
-    win = GuiInit()
     # win = gui.MainWindow()
     # win.setupUi()
     img = pg.ImageItem()
