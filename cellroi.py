@@ -115,6 +115,7 @@ class Image:
                                 float(rData[2]))
                 region.imOld = True
                 region.timeStamp = int(rData[3])
+                region.showArrow()
                 itemToList = "%s, %i, %.1f, %.1f" % (region._type,
                                                      region.timeStamp,
                                                      region.mouseCenter['x'],
@@ -168,6 +169,13 @@ class Region:
         self.imOld = False
         self.number = 0
         self.timeStamp = createTimeStamp()
+        self.arrow = createArrow(self.mouseCenter['x'], self.mouseCenter['y'])
+
+    def showArrow(self):
+        win.ui.mainPlot.addItem(self.arrow)
+
+    def hideArrow(self):
+        win.ui.mainPlot.removeItem(self.arrow)
 
     def saveRegion(self):
         imageBaseName = os.path.basename(
@@ -209,6 +217,13 @@ def update():
     win.ui.histogram.setImageItem(win.ui.roiImage)
     win.ui.roiPlot.autoRange()
     threshold(roiArr)
+
+
+def createArrow(x, y):
+    arrow = pg.ArrowItem(angle=270, tipAngle=40, baseAngle=30, headLen=20,
+                         tailLen=None, brush='k')
+    arrow.setPos(x, y)
+    return arrow
 
 
 def getRoi(dataToRoi, imageToRoi):
@@ -277,7 +292,6 @@ def mouseMoved(evt):
 
 def mouseClicked(evt):
     items = win.ui.vb.scene().items(evt.scenePos())
-    #timestamp = createTimeStamp()
     xRoi = items[1].x()
     yRoi = items[0].y()
     print xRoi, yRoi
@@ -296,6 +310,7 @@ def mouseClicked(evt):
                                                  region.mouseCenter['y'])
             win.addItemsToList(win.ui.contoursList, [itemToList])
             Im.addRegion(region)
+            region.showArrow()
     else:
         region.metaData['color'] = currColor
         makeRegionData(region, nobkg=False)
@@ -304,6 +319,7 @@ def mouseClicked(evt):
                                              region.mouseCenter['x'],
                                              region.mouseCenter['y'])
         win.addItemsToList(win.ui.contoursList, [itemToList])
+        region.showArrow()
         Im.addRegion(region)
 
 
@@ -311,6 +327,8 @@ def onItemChanged(curr, prev):
     global Im
     global img, imgc
     print type(curr.text())
+    for region in Im.regions:
+        region.hideArrow()
     Im = imagesContener[str(curr.text())]
     Im.loadData()
     img.setImage(Im.grayData)
@@ -323,7 +341,7 @@ def onItemChanged(curr, prev):
                                                  region.mouseCenter['x'],
                                                  region.mouseCenter['y'])
             win.addItemsToList(win.ui.contoursList, [itemToList])
-    # win.setMainPlot(imgc)
+            region.showArrow()
 
 
 def checkContour(xRoi, yRoi):
@@ -351,8 +369,9 @@ def deleteContour():
 
     for i, region in enumerate(Im.regions):
         if (str(region._type) == str(_type) and
-            str(region.timeStamp) == str(timeStamp)):
+                str(region.timeStamp) == str(timeStamp)):
 
+            region.hideArrow()
             del Im.regions[i]
             files = glob.glob(os.path.join(workDir,
                                            os.path.basename(
@@ -374,6 +393,10 @@ def deleteContour():
 
 
 def deleteAllContour():
+
+    for region in Im.regions:
+        region.hideArrow()
+
     Im.regions = []
     files = glob.glob(os.path.join(workDir,
                                    os.path.basename(
@@ -465,7 +488,8 @@ def typeChoose():
 
 
 def createTimeStamp():
-    timeStamp = str(round(time.time(), 2)).replace('.', '')
+    timeStamp = "%.2f" % round(time.time(), 2)
+    timeStamp = timeStamp.replace(".", "")
 
     return timeStamp
 
@@ -477,10 +501,9 @@ if __name__ == '__main__':
     imagesContener = {}
     currColor = 'GRAY'
     currRegionType = 'Cell'
-    for image in images:
+    for image in images[::-1]:
         Im = Image(image)
         imagesContener[image] = Im
-        Im.loadRegions()
     Im.loadData()
     # win = gui.MainWindow()
     # win.setupUi()
@@ -490,5 +513,7 @@ if __name__ == '__main__':
     imgc.setImage(Im.cData)
     win.setMainPlot(imgc)
     win.addItemsToList(win.ui.imagesList, images)
+
+    Im.loadRegions()
     win.show()
     sys.exit(app.exec_())

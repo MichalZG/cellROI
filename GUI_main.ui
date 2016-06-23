@@ -178,6 +178,187 @@
      </property>
     </layout>
    </widget>
+   <widget class="QSpinBox" name="blockSizeSpinBox">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>510</y>
+      <width>91</width>
+      <height>27</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="blockSizeLabel">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>490</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Block Size</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="methodLabel">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>610</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Method</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="methodComboBox">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>630</y>
+      <width>75</width>
+      <height>33</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>generic</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>gaussian</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>mean</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>median</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QSpinBox" name="offsetSpinBox">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>570</y>
+      <width>91</width>
+      <height>27</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="offsetLabel">
+    <property name="geometry">
+     <rect>
+      <x>910</x>
+      <y>550</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Offset</string>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdCells">
+    <property name="geometry">
+     <rect>
+      <x>1290</x>
+      <y>510</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdBkgs">
+    <property name="geometry">
+     <rect>
+      <x>1290</x>
+      <y>550</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdRedCells">
+    <property name="geometry">
+     <rect>
+      <x>1290</x>
+      <y>590</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLCDNumber" name="lcdOthers">
+    <property name="geometry">
+     <rect>
+      <x>1290</x>
+      <y>630</y>
+      <width>64</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="cellsCounterLabel">
+    <property name="geometry">
+     <rect>
+      <x>1220</x>
+      <y>510</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cells</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="bkgsCounterLabel">
+    <property name="geometry">
+     <rect>
+      <x>1220</x>
+      <y>550</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Bkgs</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="redCellsCounterLabel">
+    <property name="geometry">
+     <rect>
+      <x>1220</x>
+      <y>590</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Red Cells</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="OthersCounterLabel">
+    <property name="geometry">
+     <rect>
+      <x>1220</x>
+      <y>630</y>
+      <width>56</width>
+      <height>17</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Others</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
