@@ -51,7 +51,7 @@ class MainWindow(object):
         self.saveContourButton.setGeometry(QtCore.QRect(1360, 50, 85, 27))
         self.saveContourButton.setObjectName(_fromUtf8("saveContourButton"))
         self.deleteAllContourButton = QtGui.QPushButton(self.centralwidget)
-        self.deleteAllContourButton.setGeometry(QtCore.QRect(1360, 140, 85, 27))
+        self.deleteAllContourButton.setGeometry(QtCore.QRect(1360, 140, 85, 54))
         self.deleteAllContourButton.setObjectName(_fromUtf8(
             "deleteAllContourButton"))
         self.saveAllContourButton = QtGui.QPushButton(self.centralwidget)
@@ -154,7 +154,7 @@ class MainWindow(object):
         self.saveContourButton.setText(_translate(
             "MainWindow", "Save", None))
         self.deleteAllContourButton.setText(_translate(
-            "MainWindow", "Delete All", None))
+            "MainWindow", "Delete All\n(for this img)", None))
         self.saveAllContourButton.setText(_translate(
             "MainWindow", "Save All", None))
         self.waterButton.setText(_translate(

@@ -17,6 +17,7 @@ import sys
 # import pickle
 import csv
 import collections
+import time
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 workDir = os.getcwd()
@@ -113,9 +114,9 @@ class Image:
                 region = Region(rData[0], float(rData[1]),
                                 float(rData[2]))
                 region.imOld = True
-                region.number = int(rData[3])
+                region.timeStamp = int(rData[3])
                 itemToList = "%s, %i, %.1f, %.1f" % (region._type,
-                                                     region.number,
+                                                     region.timeStamp,
                                                      region.mouseCenter['x'],
                                                      region.mouseCenter['y'])
                 win.addItemsToList(win.ui.contoursList, [itemToList])
@@ -149,7 +150,7 @@ class Image:
                 f.write(','.join((region._type,
                                  str(region.mouseCenter['x']),
                                  str(region.mouseCenter['y']),
-                                 str(region.number)+'\n')))
+                                 str(region.timeStamp)+'\n')))
         for region in self.regions:
             if not region.imOld:
                 region.saveRegion()
@@ -166,6 +167,7 @@ class Region:
         self.regionImage = None
         self.imOld = False
         self.number = 0
+        self.timeStamp = createTimeStamp()
 
     def saveRegion(self):
         imageBaseName = os.path.basename(
@@ -176,22 +178,22 @@ class Region:
             io.imsave(os.path.join(pathToSave,
                                    '_'.join((
                                        self._type,
-                                       str(self.number),
+                                       str(self.timeStamp),
                                        c, imageBaseName+'.bmp'))), arr)
         if self.contour is not None:
             np.savetxt(os.path.join(pathToSave,
                                     '_'.join((self._type,
-                                              str(self.number),
+                                              str(self.timeStamp),
                                               'contour.dat'))), self.contour)
         np.savetxt(os.path.join(pathToSave,
                                 '_'.join((self._type,
-                                          str(self.number),
+                                          str(self.timeStamp),
                                           'mask.dat'))), self.mask)
         # pickle.dump(self.metaData,
         #            open(os.path.join(pathToSave, 'metaData.dat'), 'wb'))
         writer = csv.writer(open(os.path.join(pathToSave,
                                               '_'.join((self._type,
-                                                       str(self.number),
+                                                       str(self.timeStamp),
                                                        'metaData.dat'))),
                                  'wb'), delimiter=':')
 
@@ -275,6 +277,7 @@ def mouseMoved(evt):
 
 def mouseClicked(evt):
     items = win.ui.vb.scene().items(evt.scenePos())
+    #timestamp = createTimeStamp()
     xRoi = items[1].x()
     yRoi = items[0].y()
     print xRoi, yRoi
@@ -287,8 +290,8 @@ def mouseClicked(evt):
             region.metaData['color'] = currColor
             region.contour = contour
             makeRegionData(region)
-            itemToList = "%s, %i, %.1f, %.1f" % (region._type,
-                                                 region.number,
+            itemToList = "%s, %s, %.1f, %.1f" % (region._type,
+                                                 region.timeStamp,
                                                  region.mouseCenter['x'],
                                                  region.mouseCenter['y'])
             win.addItemsToList(win.ui.contoursList, [itemToList])
@@ -296,8 +299,8 @@ def mouseClicked(evt):
     else:
         region.metaData['color'] = currColor
         makeRegionData(region, nobkg=False)
-        itemToList = "%s, %i, %.1f, %.1f" % (region._type,
-                                             region.number,
+        itemToList = "%s, %s, %.1f, %.1f" % (region._type,
+                                             region.timeStamp,
                                              region.mouseCenter['x'],
                                              region.mouseCenter['y'])
         win.addItemsToList(win.ui.contoursList, [itemToList])
@@ -315,8 +318,8 @@ def onItemChanged(curr, prev):
     win.clearList(win.ui.contoursList)
     if Im.regions:
         for region in Im.regions:
-            itemToList = "%s, %i, %.1f, %.1f" % (region._type,
-                                                 region.number,
+            itemToList = "%s, %s, %.1f, %.1f" % (region._type,
+                                                 region.timeStamp,
                                                  region.mouseCenter['x'],
                                                  region.mouseCenter['y'])
             win.addItemsToList(win.ui.contoursList, [itemToList])
@@ -344,17 +347,18 @@ def saveAllContour():
 def deleteContour():
     currItemText = win.ui.contoursList.currentItem().text().split(', ')
     win.ui.contoursList.takeItem(win.ui.contoursList.currentRow())
-    _type, number = currItemText[0], currItemText[1]
+    _type, timeStamp = currItemText[0], currItemText[1]
 
     for i, region in enumerate(Im.regions):
-        if (str(region._type) == str(_type) and str(region.number) == str(number)):
+        if (str(region._type) == str(_type) and
+            str(region.timeStamp) == str(timeStamp)):
 
             del Im.regions[i]
             files = glob.glob(os.path.join(workDir,
                                            os.path.basename(
                                                Im.fileName.split('.')[0]),
                                            str(_type) + '_' +
-                                           str(number) + '*.*'))
+                                           str(timeStamp) + '*.*'))
             for f in files:
                 os.remove(f)
 
@@ -366,7 +370,7 @@ def deleteContour():
                     f.write(','.join((region._type,
                                      str(region.mouseCenter['x']),
                                      str(region.mouseCenter['y']),
-                                     str(region.number)+'\n')))
+                                     str(region.timeStamp)+'\n')))
 
 
 def deleteAllContour():
@@ -419,7 +423,7 @@ def makeRegionData(region, nobkg=True):
     region.metaData['xEnd'] = roiSlice[0][0][1]
     region.metaData['yStart'] = roiSlice[0][1][0]
     region.metaData['yEnd'] = roiSlice[0][1][1]
-
+    region.metaData['timeStamp'] = region.timeStamp
     # np.savetxt('.'.join((c, 'txt')), region.contour)
     # io.imsave('.'.join((c, 'bmp')), out)
     if nobkg:
@@ -458,6 +462,12 @@ def typeChoose():
     global currRegionType
     currRegionType = str(win.ui.typeChooser.currentText())
     update()
+
+
+def createTimeStamp():
+    timeStamp = str(round(time.time(), 2)).replace('.', '')
+
+    return timeStamp
 
 
 if __name__ == '__main__':
