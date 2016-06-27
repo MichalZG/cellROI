@@ -6,7 +6,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
 # from skimage.filters import threshold_otsu
 from skimage.filters import threshold_adaptive
-from skimage import measure
+from skimage import measure, img_as_ubyte
 # from pyqtgraph.Point import Point
 from skimage.draw import polygon
 from skimage import transform
@@ -41,6 +41,9 @@ class GuiInit(QtGui.QMainWindow):
         self.ui.saveAllContourButton.clicked.connect(saveAllContour)
         self.ui.deleteContourButton.clicked.connect(deleteContour)
         self.ui.deleteAllContourButton.clicked.connect(deleteAllContour)
+        self.ui.blockSizeSpinBox.valueChanged.connect(blockSizeChoose)
+        self.ui.offsetSpinBox.valueChanged.connect(offsetChoose)
+        self.ui.methodComboBox.currentIndexChanged.connect(methodChoose)
         self.ui.timer.timeout.connect(updateContours)
         self.ui.timer.start(0)
 
@@ -73,14 +76,14 @@ class Image:
         self.fileName = fileName
 
     def loadData(self):
-        self.rawData = io.imread(self.fileName)
+        self.rawData = io.imread(self.fileName, plugin='tifffile')
         self.rawData = cv2.merge((self.rawData[:, :, 0].T,
                                   self.rawData[:, :, 1].T,
                                   self.rawData[:, :, 2].T))
         self.cData = self.rawData.copy()
         self.grayData = self.rawData.copy()
         self.grayData = color.rgb2gray(self.rawData)
-        self.hsvData = color.rgb2hsv(self.rawData)
+        self.hsvData = img_as_ubyte(color.rgb2hsv(self.rawData))
         # self.grayData = self.grayData.convert('LA')
         # self.grayData = self.grayData.transpose(method=PIL.Image.TRANSPOSE)
         self.grayData = transform.rotate(self.grayData, angle=0)
@@ -187,7 +190,8 @@ class Region:
                                    '_'.join((
                                        self._type,
                                        str(self.timeStamp),
-                                       c, imageBaseName+'.bmp'))), arr)
+                                       c, imageBaseName+'.tif'))),
+                      img_as_ubyte(arr))
         if self.contour is not None:
             np.savetxt(os.path.join(pathToSave,
                                     '_'.join((self._type,
@@ -216,7 +220,7 @@ def update():
     win.ui.roiImage.setImage(roiArr)
     win.ui.histogram.setImageItem(win.ui.roiImage)
     win.ui.roiPlot.autoRange()
-    threshold(roiArr)
+    threshold()
 
 
 def createArrow(x, y):
@@ -227,6 +231,7 @@ def createArrow(x, y):
 
 
 def getRoi(dataToRoi, imageToRoi):
+    global roiArr
     global roiCoords
     global roiCopy
     global roiSliceParam
@@ -246,7 +251,7 @@ def updateContours():
     if win.ui.contourButton.isChecked():
         roiArr, roiCoords = getRoi(Im.colorDict[currColor], imgc)
         tempArr = np.copy(roiArr)
-        contours = threshold(roiArr)
+        contours = threshold()
         for c in contours:
             c = c.astype(int)
             tempArr[c[:, 0], c[:, 1]] = 1
@@ -258,8 +263,10 @@ def updateContours():
         # roiImage.setImage(roi_arr)
 
 
-def threshold(roiArr):
-    otsu = threshold_adaptive(roiArr, block_size=100, method='mean')
+def threshold():
+    otsu = threshold_adaptive(roiArr, block_size=blockSize, method=threshMethod,
+                              offset=offset)
+    print blockSize
     otsuArr = roiArr >= otsu
     otsuArr = otsuArr.astype('float64')
     contours = makeContour(otsuArr)
@@ -487,6 +494,24 @@ def typeChoose():
     update()
 
 
+def blockSizeChoose():
+    global blockSize
+    blockSize = int(win.ui.blockSizeSpinBox.value())
+    threshold()
+
+
+def offsetChoose():
+    global offset
+    offset = int(win.ui.offsetSpinBox.value()) / 1000.
+    threshold()
+
+
+def methodChoose():
+    global threshMethod
+    threshMethod = str(win.ui.methodComboBox.currentText())
+    threshold()
+
+
 def createTimeStamp():
     timeStamp = "%.2f" % round(time.time(), 2)
     timeStamp = timeStamp.replace(".", "")
@@ -497,6 +522,13 @@ def createTimeStamp():
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     win = GuiInit()
+
+    blockSize = 99
+    offset = 0
+    threshMethod = 'mean'
+    win.ui.blockSizeSpinBox.setValue(blockSize)
+    win.ui.offsetSpinBox.setValue(offset)
+
     images = sorted(glob.glob("*.tif"))
     imagesContener = {}
     currColor = 'GRAY'
@@ -514,6 +546,7 @@ if __name__ == '__main__':
     win.setMainPlot(imgc)
     win.addItemsToList(win.ui.imagesList, images)
 
+    update()
     Im.loadRegions()
     win.show()
     sys.exit(app.exec_())
