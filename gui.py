@@ -58,9 +58,9 @@ class MainWindow(object):
         self.saveAllContourButton.setGeometry(QtCore.QRect(1360, 80, 85, 27))
         self.saveAllContourButton.setObjectName(_fromUtf8(
             "saveAllContourButton"))
-        self.waterButton = QtGui.QCheckBox(self.centralwidget)
-        self.waterButton.setGeometry(QtCore.QRect(550, 830, 101, 22))
-        self.waterButton.setObjectName(_fromUtf8("waterButton"))
+        # self.waterButton = QtGui.QCheckBox(self.centralwidget)
+        # self.waterButton.setGeometry(QtCore.QRect(550, 830, 101, 22))
+        # self.waterButton.setObjectName(_fromUtf8("waterButton"))
         self.contourButton = QtGui.QCheckBox(self.centralwidget)
         self.contourButton.setGeometry(QtCore.QRect(170, 830, 101, 22))
         self.contourButton.setObjectName(_fromUtf8("contourButton"))
@@ -214,8 +214,8 @@ class MainWindow(object):
             "MainWindow", "Delete All\n(for this img)", None))
         self.saveAllContourButton.setText(_translate(
             "MainWindow", "Save All", None))
-        self.waterButton.setText(_translate(
-            "MainWindow", "Watershed", None))
+        # self.waterButton.setText(_translate(
+        #     "MainWindow", "Watershed", None))
         self.contourButton.setText(_translate(
             "MainWindow", "Plot contour", None))
         self.menuMenu.setTitle(_translate("MainWindow", "Menu", None))
