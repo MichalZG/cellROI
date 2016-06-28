@@ -83,7 +83,7 @@ class Image:
         self.cData = self.rawData.copy()
         self.grayData = self.rawData.copy()
         self.grayData = color.rgb2gray(self.rawData)
-        self.hsvData = img_as_ubyte(color.rgb2hsv(self.rawData))
+        self.hsvData = color.rgb2hsv(self.rawData)
         # self.grayData = self.grayData.convert('LA')
         # self.grayData = self.grayData.transpose(method=PIL.Image.TRANSPOSE)
         self.grayData = transform.rotate(self.grayData, angle=0)
@@ -127,10 +127,10 @@ class Image:
 
                 self.addRegion(region)
                 if region._type in self.regionsCounter:
-                    if region._type > self.regionsCounter[region._type]:
-                        self.regionsCounter[region._type] = region.number
+                    self.regionsCounter[region._type] += 1
                 else:
-                    self.regionsCounter[region._type] = region.number
+                    self.regionsCounter[region._type] = 1
+            updateLCD()
 
         except IOError:
             print 'no regions found!'
@@ -150,7 +150,6 @@ class Image:
                                    self.fileName.split('.')[0]),
                                'regions_list.dat'), 'w') as f:
             for region in self.regions:
-                print region.mouseCenter['x'], type(region.mouseCenter['x'])
                 f.write(','.join((region._type,
                                  str(region.mouseCenter['x']),
                                  str(region.mouseCenter['y']),
@@ -183,7 +182,6 @@ class Region:
     def saveRegion(self):
         imageBaseName = os.path.basename(
             self.regionImage.fileName).split('.')[0]
-        print imageBaseName
         pathToSave = os.path.join(workDir, imageBaseName)
         for c, arr in self.imagesArrays.iteritems():
             io.imsave(os.path.join(pathToSave,
@@ -266,7 +264,6 @@ def updateContours():
 def threshold():
     otsu = threshold_adaptive(roiArr, block_size=blockSize, method=threshMethod,
                               offset=offset)
-    print blockSize
     otsuArr = roiArr >= otsu
     otsuArr = otsuArr.astype('float64')
     contours = makeContour(otsuArr)
@@ -301,7 +298,6 @@ def mouseClicked(evt):
     items = win.ui.vb.scene().items(evt.scenePos())
     xRoi = items[1].x()
     yRoi = items[0].y()
-    print xRoi, yRoi
     xRoiGlobal = roiCoords[0][xRoi][yRoi]
     yRoiGlobal = roiCoords[1][xRoi][yRoi]
     region = Region(currRegionType, xRoiGlobal, yRoiGlobal)
@@ -335,7 +331,6 @@ def mouseClicked(evt):
 def onItemChanged(curr, prev):
     global Im
     global img, imgc
-    print type(curr.text())
     for region in Im.regions:
         region.hideArrow()
     Im = imagesContener[str(curr.text())]
@@ -372,39 +367,40 @@ def saveAllContour():
 
 
 def deleteContour():
-    currItemText = win.ui.contoursList.currentItem().text().split(', ')
-    win.ui.contoursList.takeItem(win.ui.contoursList.currentRow())
-    _type, timeStamp = currItemText[0], currItemText[1]
+    if win.ui.contoursList.currentItem() is not None:
+        currItemText = win.ui.contoursList.currentItem().text().split(', ')
+        win.ui.contoursList.takeItem(win.ui.contoursList.currentRow())
+        _type, timeStamp = currItemText[0], currItemText[1]
 
-    for i, region in enumerate(Im.regions):
-        if (str(region._type) == str(_type) and
-                str(region.timeStamp) == str(timeStamp)):
+        for i, region in enumerate(Im.regions):
+            if (str(region._type) == str(_type) and
+                    str(region.timeStamp) == str(timeStamp)):
 
-            region.hideArrow()
-            del Im.regions[i]
-            Im.regionsCounter[region._type] -= 1
+                region.hideArrow()
+                del Im.regions[i]
+                Im.regionsCounter[region._type] -= 1
 
-            files = glob.glob(os.path.join(workDir,
+                files = glob.glob(os.path.join(workDir,
+                                               os.path.basename(
+                                                   Im.fileName.split('.')[0]),
+                                               str(_type) + '_' +
+                                               str(timeStamp) + '*.*'))
+                for f in files:
+                    os.remove(f)
+                try:
+                    with open(os.path.join(workDir,
                                            os.path.basename(
                                                Im.fileName.split('.')[0]),
-                                           str(_type) + '_' +
-                                           str(timeStamp) + '*.*'))
-            for f in files:
-                os.remove(f)
-            try:
-                with open(os.path.join(workDir,
-                                       os.path.basename(
-                                           Im.fileName.split('.')[0]),
-                                       'regions_list.dat'), 'w') as f:
-                    for region in Im.regions:
-                        f.write(','.join((region._type,
-                                         str(region.mouseCenter['x']),
-                                         str(region.mouseCenter['y']),
-                                         str(region.timeStamp)+'\n')))
-            except IOError:
-                pass
+                                           'regions_list.dat'), 'w') as f:
+                        for region in Im.regions:
+                            f.write(','.join((region._type,
+                                             str(region.mouseCenter['x']),
+                                             str(region.mouseCenter['y']),
+                                             str(region.timeStamp)+'\n')))
+                except IOError:
+                    pass
 
-    updateLCD()
+        updateLCD()
 
 
 def deleteAllContour():
