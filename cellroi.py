@@ -92,9 +92,9 @@ class Image:
         self.b = self.cData[:, :, 0]
         self.g = self.cData[:, :, 1]
         self.r = self.cData[:, :, 2]
-        self.h = self.hsvData[:, :, 0]
+        self.v = self.hsvData[:, :, 0]
         self.s = self.hsvData[:, :, 1]
-        self.v = self.hsvData[:, :, 2]
+        self.h = self.hsvData[:, :, 2]
 
         self.colorDict = {'RGB': self.cData,
                           'GRAY': self.grayData,
@@ -435,17 +435,17 @@ def makeRegionData(region, nobkg=True):
                 mask = np.zeros_like(roiCopy)
                 out = np.zeros_like(roiCopy)
 
-                region.imagesArrays[c+'_nomask'] = roiCopy
+                Arr, Coords = getRoi(arr, imgc)
+                region.imagesArrays[c+'_nomask'] = Arr
                 mask[rr, cc] = 1
-                roiArr, roiCoords = getRoi(arr, imgc)
-                out[mask == 1] = roiArr[mask == 1]
+                out[mask == 1] = Arr[mask == 1]
                 region.imagesArrays[c+'_mask'] = out
     else:
         for c, arr in Im.colorDict.iteritems():
             if c not in ('RGB', 'HSV'):
                 mask = np.full(roiCopy.shape, 1)
-                roiArr, roiCoords = getRoi(arr, imgc)
-                out = np.copy(roiArr)
+                Arr, roiCoords = getRoi(arr, imgc)
+                out = np.copy(Arr)
                 region.imagesArrays[c+'_nomask'] = out
 
     if region._type not in Im.regionsCounter:
