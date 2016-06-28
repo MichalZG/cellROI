@@ -318,6 +318,7 @@ def mouseClicked(evt):
             win.addItemsToList(win.ui.contoursList, [itemToList])
             Im.addRegion(region)
             region.showArrow()
+            updateLCD()
     else:
         region.metaData['color'] = currColor
         makeRegionData(region, nobkg=False)
@@ -328,6 +329,7 @@ def mouseClicked(evt):
         win.addItemsToList(win.ui.contoursList, [itemToList])
         region.showArrow()
         Im.addRegion(region)
+        updateLCD()
 
 
 def onItemChanged(curr, prev):
@@ -380,6 +382,8 @@ def deleteContour():
 
             region.hideArrow()
             del Im.regions[i]
+            Im.regionsCounter[region._type] -= 1
+
             files = glob.glob(os.path.join(workDir,
                                            os.path.basename(
                                                Im.fileName.split('.')[0]),
@@ -387,16 +391,20 @@ def deleteContour():
                                            str(timeStamp) + '*.*'))
             for f in files:
                 os.remove(f)
+            try:
+                with open(os.path.join(workDir,
+                                       os.path.basename(
+                                           Im.fileName.split('.')[0]),
+                                       'regions_list.dat'), 'w') as f:
+                    for region in Im.regions:
+                        f.write(','.join((region._type,
+                                         str(region.mouseCenter['x']),
+                                         str(region.mouseCenter['y']),
+                                         str(region.timeStamp)+'\n')))
+            except IOError:
+                pass
 
-            with open(os.path.join(workDir,
-                                   os.path.basename(
-                                       Im.fileName.split('.')[0]),
-                                   'regions_list.dat'), 'w') as f:
-                for region in Im.regions:
-                    f.write(','.join((region._type,
-                                     str(region.mouseCenter['x']),
-                                     str(region.mouseCenter['y']),
-                                     str(region.timeStamp)+'\n')))
+    updateLCD()
 
 
 def deleteAllContour():
@@ -414,6 +422,7 @@ def deleteAllContour():
     for k, v in Im.regionsCounter.iteritems():
         Im.regionsCounter[k] = 0
     win.clearList(win.ui.contoursList)
+    updateLCD()
 
 
 def makeRegionData(region, nobkg=True):
@@ -519,6 +528,17 @@ def createTimeStamp():
     return timeStamp
 
 
+def updateLCD():
+    if 'Cell' in Im.regionsCounter:
+        win.ui.lcdCells.display(Im.regionsCounter['Cell'])
+    if 'Background' in Im.regionsCounter:
+        win.ui.lcdBkgs.display(Im.regionsCounter['Background'])
+    if 'Red Cell' in Im.regionsCounter:
+        win.ui.lcdRedCells.display(Im.regionsCounter['Red Cell'])
+    if 'Other' in Im.regionsCounter:
+        win.ui.lcdOthers.display(Im.regionsCounter['Other'])
+
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     win = GuiInit()
@@ -526,7 +546,11 @@ if __name__ == '__main__':
     blockSize = 99
     offset = 0
     threshMethod = 'mean'
+
+    win.ui.blockSizeSpinBox.setSingleStep(2)
     win.ui.blockSizeSpinBox.setValue(blockSize)
+    win.ui.blockSizeSpinBox.setMinimum(1)
+    win.ui.blockSizeSpinBox.setMaximum(199)
     win.ui.offsetSpinBox.setValue(offset)
 
     images = sorted(glob.glob("*.tif"))
