@@ -6,7 +6,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
 # from skimage.filters import threshold_otsu
 from skimage.filters import threshold_adaptive
-from skimage import measure, img_as_ubyte
+from skimage import measure, img_as_uint
 # from pyqtgraph.Point import Point
 from skimage.draw import polygon
 from skimage import transform
@@ -18,6 +18,7 @@ import sys
 import csv
 import collections
 import time
+
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
 workDir = os.getcwd()
@@ -189,7 +190,7 @@ class Region:
                                        self._type,
                                        str(self.timeStamp),
                                        c, imageBaseName+'.tif'))),
-                      img_as_ubyte(arr))
+                      img_as_uint(arr))
         if self.contour is not None:
             np.savetxt(os.path.join(pathToSave,
                                     '_'.join((self._type,
