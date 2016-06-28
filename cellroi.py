@@ -338,6 +338,7 @@ def onItemChanged(curr, prev):
     img.setImage(Im.grayData)
     imgc.setImage(Im.cData)
     win.clearList(win.ui.contoursList)
+    updateLCD()
     if Im.regions:
         for region in Im.regions:
             itemToList = "%s, %s, %.1f, %.1f" % (region._type,
@@ -525,14 +526,28 @@ def createTimeStamp():
 
 
 def updateLCD():
-    if 'Cell' in Im.regionsCounter:
-        win.ui.lcdCells.display(Im.regionsCounter['Cell'])
-    if 'Background' in Im.regionsCounter:
-        win.ui.lcdBkgs.display(Im.regionsCounter['Background'])
-    if 'Red Cell' in Im.regionsCounter:
-        win.ui.lcdRedCells.display(Im.regionsCounter['Red Cell'])
-    if 'Other' in Im.regionsCounter:
-        win.ui.lcdOthers.display(Im.regionsCounter['Other'])
+    if Im.regionsCounter:
+        if 'Cell' in Im.regionsCounter:
+            win.ui.lcdCells.display(Im.regionsCounter['Cell'])
+        else:
+            win.ui.lcdCells.display(0)
+        if 'Background' in Im.regionsCounter:
+            win.ui.lcdBkgs.display(Im.regionsCounter['Background'])
+        else:
+            win.ui.lcdBkgs.display(0)
+        if 'Red Cell' in Im.regionsCounter:
+            win.ui.lcdRedCells.display(Im.regionsCounter['Red Cell'])
+        else:
+            win.ui.lcdRedCells.display(0)
+        if 'Other' in Im.regionsCounter:
+            win.ui.lcdOthers.display(Im.regionsCounter['Other'])
+        else:
+            win.ui.lcdOthers.display(0)
+    else:
+        win.ui.lcdCells.display(0)
+        win.ui.lcdBkgs.display(0)
+        win.ui.lcdRedCells.display(0)
+        win.ui.lcdOther.display(0)
 
 
 if __name__ == '__main__':
