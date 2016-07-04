@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # import sys
 from skimage import io, color
 import numpy as np
@@ -21,7 +22,7 @@ import time
 
 
 scriptPath = os.path.dirname(os.path.realpath(__file__))
-workDir = os.getcwd()
+workDir = os.path.curdir
 
 
 class GuiInit(QtGui.QMainWindow):
