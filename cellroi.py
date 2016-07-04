@@ -108,33 +108,33 @@ class Image:
                           'V': self.v}
 
     def loadRegions(self):
-        try:
-            regionsList = np.loadtxt(os.path.join(workDir, os.path.basename(
-                self.fileName.split('.')[0]), 'regions_list.dat'),
-                dtype='string', delimiter=',', ndmin=2)
-            print 'loading regions...'
 
-            for rData in regionsList:
-                region = Region(rData[0], float(rData[1]),
-                                float(rData[2]))
-                region.imOld = True
-                region.timeStamp = int(rData[3])
-                region.showArrow()
-                itemToList = "%s, %i, %.1f, %.1f" % (region._type,
-                                                     region.timeStamp,
-                                                     region.mouseCenter['x'],
-                                                     region.mouseCenter['y'])
-                win.addItemsToList(win.ui.contoursList, [itemToList])
+        regionsMetaDataFiles = glob.glob(os.path.join(workDir, os.path.basename(
+                self.fileName.split('.')[0]), '*metaData.dat'))
 
-                self.addRegion(region)
-                if region._type in self.regionsCounter:
-                    self.regionsCounter[region._type] += 1
-                else:
-                    self.regionsCounter[region._type] = 1
-            updateLCD()
+        if regionsMetaDataFiles:
+            print self.fileName, 'loading regions'
 
-        except IOError:
-            print 'no regions found!'
+        else:
+            print self.fileName, 'no regions found'
+
+        for regionMetaDataFile in regionsMetaDataFiles:
+            regionDict = {}
+            with open(regionMetaDataFile, 'r') as f:
+                for line in f:
+                    rline = line.strip().split(':')
+                    regionDict[rline[0]] = rline[1]
+
+            region = Region(regionDict['type'], float(regionDict['xMouse']),
+                            float(regionDict['yMouse']))
+            region.imOld = True
+            region.timeStamp = int(regionDict['timeStamp'])
+
+            self.addRegion(region)
+            if region._type in self.regionsCounter:
+                self.regionsCounter[region._type] += 1
+            else:
+                self.regionsCounter[region._type] = 1
 
     def addRegion(self, region):
         self.regions.append(region)
@@ -146,18 +146,18 @@ class Image:
         except OSError:
             pass
 
-        with open(os.path.join(workDir,
-                               os.path.basename(
-                                   self.fileName.split('.')[0]),
-                               'regions_list.dat'), 'w') as f:
-            for region in self.regions:
-                f.write(','.join((region._type,
-                                 str(region.mouseCenter['x']),
-                                 str(region.mouseCenter['y']),
-                                 str(region.timeStamp)+'\n')))
         for region in self.regions:
             if not region.imOld:
                 region.saveRegion()
+
+    def showRegions(self):
+        for region in self.regions:
+            region.showArrow()
+            itemToList = "%s, %i, %.1f, %.1f" % (region._type,
+                                                 region.timeStamp,
+                                                 region.mouseCenter['x'],
+                                                 region.mouseCenter['y'])
+            win.addItemsToList(win.ui.contoursList, [itemToList])
 
 
 class Region:
@@ -297,13 +297,13 @@ def mouseMoved(evt):
 
 def mouseClicked(evt):
     items = win.ui.vb.scene().items(evt.scenePos())
-    xRoi = items[1].x()
-    yRoi = items[0].y()
-    xRoiGlobal = roiCoords[0][xRoi][yRoi]
-    yRoiGlobal = roiCoords[1][xRoi][yRoi]
-    region = Region(currRegionType, xRoiGlobal, yRoiGlobal)
+    xMouse = items[1].x()
+    yMouse = items[0].y()
+    xMouseGlobal = round(roiCoords[0][xMouse][yMouse], 2)
+    yMouseGlobal = round(roiCoords[1][xMouse][yMouse], 2)
+    region = Region(currRegionType, xMouseGlobal, yMouseGlobal)
     if region._type in ('Cell', 'Red Cell', 'Other'):
-        contour = checkContour(xRoi, yRoi)
+        contour = checkContour(xMouse, yMouse)
         if contour is not None:
             region.metaData['color'] = currColor
             region.contour = contour
@@ -389,18 +389,6 @@ def deleteContour():
                                                str(timeStamp) + '*.*'))
                 for f in files:
                     os.remove(f)
-                try:
-                    with open(os.path.join(workDir,
-                                           os.path.basename(
-                                               Im.fileName.split('.')[0]),
-                                           'regions_list.dat'), 'w') as f:
-                        for region in Im.regions:
-                            f.write(','.join((region._type,
-                                             str(region.mouseCenter['x']),
-                                             str(region.mouseCenter['y']),
-                                             str(region.timeStamp)+'\n')))
-                except IOError:
-                    pass
 
         updateLCD()
 
@@ -461,6 +449,9 @@ def makeRegionData(region, nobkg=True):
     region.metaData['yStart'] = roiSlice[0][1][0]
     region.metaData['yEnd'] = roiSlice[0][1][1]
     region.metaData['timeStamp'] = region.timeStamp
+    region.metaData['xMouse'] = region.mouseCenter['x']
+    region.metaData['yMouse'] = region.mouseCenter['y']
+    region.metaData['type'] = region._type
     # np.savetxt('.'.join((c, 'txt')), region.contour)
     # io.imsave('.'.join((c, 'bmp')), out)
     if nobkg:
@@ -548,7 +539,7 @@ def updateLCD():
         win.ui.lcdCells.display(0)
         win.ui.lcdBkgs.display(0)
         win.ui.lcdRedCells.display(0)
-        win.ui.lcdOther.display(0)
+        win.ui.lcdOthers.display(0)
 
 
 if __name__ == '__main__':
@@ -572,6 +563,7 @@ if __name__ == '__main__':
     for image in images[::-1]:
         Im = Image(image)
         imagesContener[image] = Im
+        Im.loadRegions()
     Im.loadData()
     # win = gui.MainWindow()
     # win.setupUi()
@@ -583,6 +575,8 @@ if __name__ == '__main__':
     win.addItemsToList(win.ui.imagesList, images)
 
     update()
-    Im.loadRegions()
+    updateLCD()
+    Im.showRegions()
+    # Im.loadRegions()
     win.show()
     sys.exit(app.exec_())
