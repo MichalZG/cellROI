@@ -178,7 +178,9 @@ class MainWindow(object):
         self.contourPlot.addItem(self.vline, ignoreBounds=True)
         self.contourPlot.addItem(self.hline, ignoreBounds=True)
 
-        self.roi = pg.RectROI([100, 100], [100, 100], pen=(0, 9))
+        self.roi = pg.RectROI([100, 100], [100, 100], pen=(0, 3),
+                              scaleSnap=True,
+                              translateSnap=True)
         # self.roi.sigRegionChanged.connect(update)
 
         self.mainPlot.addItem(self.roi)

@@ -542,7 +542,6 @@ def updateLCD():
         win.ui.lcdRedCells.display(0)
         win.ui.lcdOthers.display(0)
 
-
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     win = GuiInit()
