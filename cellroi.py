@@ -46,6 +46,7 @@ class GuiInit(QtGui.QMainWindow):
         self.ui.blockSizeSpinBox.valueChanged.connect(blockSizeChoose)
         self.ui.offsetSpinBox.valueChanged.connect(offsetChoose)
         self.ui.methodComboBox.currentIndexChanged.connect(methodChoose)
+        self.ui.modeComboBox.currentIndexChanged.connect(modeChoose)
         self.ui.contourButton.stateChanged.connect(updateContours)
         # self.ui.timer.timeout.connect(updateContours)
         # self.ui.timer.start(0)
@@ -266,7 +267,7 @@ def updateContours():
 
 def threshold():
     otsu = threshold_adaptive(roiArr, block_size=blockSize, method=threshMethod,
-                              offset=offset)
+                              offset=offset, mode=threshMode)
     otsuArr = roiArr >= otsu
     otsuArr = otsuArr.astype('float64')
     contours = makeContour(otsuArr)
@@ -512,6 +513,12 @@ def methodChoose():
     threshold()
 
 
+def modeChoose():
+    global threshMode
+    threshMode = str(win.ui.modeComboBox.currentText())
+    threshold()
+
+
 def createTimeStamp():
     timeStamp = "%.2f" % round(time.time(), 2)
     timeStamp = timeStamp.replace(".", "")
@@ -551,7 +558,7 @@ if __name__ == '__main__':
     blockSize = 99
     offset = 0
     threshMethod = 'mean'
-
+    threshMode = 'reflect'
     win.ui.blockSizeSpinBox.setSingleStep(2)
     win.ui.blockSizeSpinBox.setValue(blockSize)
     win.ui.blockSizeSpinBox.setMinimum(1)
