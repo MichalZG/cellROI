@@ -46,8 +46,9 @@ class GuiInit(QtGui.QMainWindow):
         self.ui.blockSizeSpinBox.valueChanged.connect(blockSizeChoose)
         self.ui.offsetSpinBox.valueChanged.connect(offsetChoose)
         self.ui.methodComboBox.currentIndexChanged.connect(methodChoose)
-        self.ui.timer.timeout.connect(updateContours)
-        self.ui.timer.start(0)
+        self.ui.contourButton.stateChanged.connect(updateContours)
+        # self.ui.timer.timeout.connect(updateContours)
+        # self.ui.timer.start(0)
 
     def addItemsToList(self, _list, items):
         for i in items:
@@ -257,7 +258,7 @@ def updateContours():
             tempArr[c[:, 0], c[:, 1]] = 1
         win.ui.roiImage.setImage(tempArr)
     else:
-        pass
+        update()
         # roi_arr, roi_coords = roi.getArrayRegion(fData, img,
         #                                         returnMappedCoords=True)
         # roiImage.setImage(roi_arr)
@@ -541,6 +542,7 @@ def updateLCD():
         win.ui.lcdBkgs.display(0)
         win.ui.lcdRedCells.display(0)
         win.ui.lcdOthers.display(0)
+
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
