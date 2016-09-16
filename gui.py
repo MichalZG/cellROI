@@ -156,7 +156,8 @@ class MainWindow(object):
         self.lcdOthers.setGeometry(QtCore.QRect(1290, 630, 64, 23))
         self.lcdOthers.setObjectName(_fromUtf8("lcdOthers"))
         self.lcdOthersPalette = self.lcdOthers.palette()
-        self.lcdOthersPalette.setColor(self.lcdOthersPalette.WindowText, QtGui.QColor(85, 85, 255))
+        self.lcdOthersPalette.setColor(self.lcdOthersPalette.WindowText,
+                                       QtGui.QColor(85, 85, 255))
         self.cellsCounterLabel = QtGui.QLabel(self.centralwidget)
         self.cellsCounterLabel.setGeometry(QtCore.QRect(1220, 510, 56, 17))
         self.cellsCounterLabel.setObjectName(_fromUtf8("cellsCounterLabel"))
